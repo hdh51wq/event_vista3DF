@@ -9,6 +9,7 @@ export interface Project {
   client: string;
   event: string;
   eventType: 'Wedding' | 'Conference' | 'Gala Dinner';
+  eventDate?: string;
   location: string;
   status: 'Draft' | 'In Progress' | 'Review' | 'Final';
   thumbnail: string;
@@ -16,6 +17,7 @@ export interface Project {
   budget: number;
   currency: string;
   billingStatus: 'pending' | 'paid' | 'cancelled';
+  venueId?: string;
   data?: any;
   createdAt: string;
   updatedAt: string;
@@ -170,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (res.ok) setProjects(data);
   };
 
-  const createProject = async (projectData: Partial<Project>) => {
+  const createProject = async (projectData: Partial<Project>): Promise<Project | void> => {
     if (!token) return;
     const res = await fetch("/api/projects", {
       method: "POST",
@@ -180,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to create project");
     setProjects(prev => [data, ...prev]);
+    return data as Project;
   };
 
   const updateProject = async (id: string, projectData: Partial<Project>) => {

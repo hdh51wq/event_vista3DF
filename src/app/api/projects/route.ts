@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, client, event, eventType, location, budget, currency, billingStatus, status } = await req.json();
+    const { name, client, event, eventType, eventDate, location, budget, currency, billingStatus, status, venueId } = await req.json();
     if (!name) {
       return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
     }
@@ -47,12 +47,14 @@ export async function POST(req: NextRequest) {
       client,
       event,
       eventType:     resolvedType,
+      eventDate:     eventDate ? new Date(eventDate) : undefined,
       location,
       status:        status        ?? 'Draft',
       thumbnail,
       budget:        budget        ?? 0,
       currency:      currency      ?? 'USD',
       billingStatus: billingStatus ?? 'pending',
+      venueId:       venueId ?? undefined,
       userId,
     });
 

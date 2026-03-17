@@ -35,7 +35,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const allowed = ['name', 'client', 'event', 'eventType', 'location', 'status', 'budget', 'currency', 'billingStatus', 'thumbnail', 'data'];
+    const allowed = ['name', 'client', 'event', 'eventType', 'eventDate', 'location', 'status', 'budget', 'currency', 'billingStatus', 'thumbnail', 'venueId', 'data'];
     const update: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) update[key] = body[key];

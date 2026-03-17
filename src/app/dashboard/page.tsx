@@ -14,6 +14,8 @@ import { useRouter } from "next/navigation";
 import { useAuth, Project } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import VenueSelector from "@/components/VenueSelector";
+import type { Venue } from "@/lib/venues";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +33,7 @@ interface ProjectForm {
   client: string;
   event: string;
   eventType: EventType;
+  eventDate: string;
   location: string;
   status: Status;
   budget: string;
@@ -39,7 +42,7 @@ interface ProjectForm {
 }
 
 const EMPTY_FORM: ProjectForm = {
-  name: "", client: "", event: "", eventType: "Wedding",
+  name: "", client: "", event: "", eventType: "Wedding", eventDate: "",
   location: "", status: "Draft", budget: "", currency: "USD", billingStatus: "pending",
 };
 
@@ -68,31 +71,10 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
 ];
 
 const CURRENCIES = ["USD","EUR","GBP","MAD","AED","CAD","CHF","JPY"];
-const EVENT_TYPES: { type: EventType; label: string; emoji: string; description: string; bg: string; thumb: string }[] = [
-  {
-    type: "Wedding",
-    label: "Wedding",
-    emoji: "💍",
-    description: "Elegant wedding ceremonies & receptions",
-    bg: "from-rose-50 to-pink-50",
-    thumb: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800&auto=format&fit=crop",
-  },
-  {
-    type: "Conference",
-    label: "Conference",
-    emoji: "🎤",
-    description: "Professional corporate conferences & summits",
-    bg: "from-blue-50 to-indigo-50",
-    thumb: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=800&auto=format&fit=crop",
-  },
-  {
-    type: "Gala Dinner",
-    label: "Gala Dinner",
-    emoji: "✨",
-    description: "Luxurious gala dinners & award evenings",
-    bg: "from-amber-50 to-yellow-50",
-    thumb: "https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?q=80&w=800&auto=format&fit=crop",
-  },
+const EVENT_TYPES: { value: EventType; label: string }[] = [
+  { value: "Wedding",     label: "💍 Wedding" },
+  { value: "Gala Dinner", label: "🥂 Gala Dinner" },
+  { value: "Conference",  label: "🎤 Conference" },
 ];
 const STATUSES: Status[] = ["Draft","In Progress","Review","Final"];
 
@@ -145,7 +127,8 @@ function projectToForm(p: Project): ProjectForm {
     name:          p.name          ?? "",
     client:        p.client        ?? "",
     event:         p.event         ?? "",
-    eventType:     p.eventType     ?? "Other",
+    eventType:     (p.eventType as EventType) ?? "Wedding",
+    eventDate:     p.eventDate ?? "",
     location:      p.location      ?? "",
     status:        p.status        ?? "Draft",
     budget:        p.budget != null ? String(p.budget) : "",
@@ -304,47 +287,45 @@ function ProjectFormFields({ form, setForm }: {
           value={form.location} onChange={e => set("location")(e.target.value)} />
       </div>
 
-       {/* Event Type */}
-       <div className="space-y-3 md:col-span-2">
-         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-           <Briefcase className="w-3 h-3" /> Event Type *
-         </label>
-         <div className="grid grid-cols-3 gap-3">
-           {EVENT_TYPES.map(et => {
-             const active = form.eventType === et.type;
-             return (
-               <button key={et.type} type="button"
-                 onClick={() => setForm(f => ({ ...f, eventType: et.type }))}
-                 className={cn(
-                   "relative rounded-2xl overflow-hidden border-2 transition-all text-left group",
-                   active ? "border-coral-400 shadow-md" : "border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
-                 )}>
-                 {/* Mini preview */}
-                 <div className="aspect-[4/3] w-full relative overflow-hidden">
-                   <img src={et.thumb} alt={et.label}
-                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                   <div className={cn(
-                     "absolute inset-0 transition-opacity",
-                     active ? "bg-coral-500/20" : "bg-zinc-900/10 dark:bg-black/40 group-hover:bg-zinc-900/5 dark:group-hover:bg-black/20"
-                   )} />
-                   {active && (
-                     <div className="absolute top-2 right-2 w-5 h-5 bg-coral-500 rounded-full flex items-center justify-center shadow">
-                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                       </svg>
-                     </div>
-                   )}
-                 </div>
-                 <div className={cn("p-2.5 bg-gradient-to-b dark:from-zinc-900 dark:to-zinc-950", et.bg)}>
-                   <p className={cn("text-xs font-bold leading-tight", active ? "text-coral-600 dark:text-coral-400" : "text-zinc-700 dark:text-zinc-400")}>
-                     {et.emoji} {et.label}
-                   </p>
-                 </div>
-               </button>
-             );
-           })}
-         </div>
-       </div>
+      {/* Event Type */}
+      <div className="space-y-2 md:col-span-2">
+        <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+          <Briefcase className="w-3 h-3" /> Event Type *
+        </label>
+        <div className="relative">
+          <select
+            required
+            value={form.eventType}
+            onChange={e => setForm(f => ({ ...f, eventType: e.target.value as EventType }))}
+            className="w-full px-4 pr-9 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer"
+          >
+            <option value="" disabled>
+              Select event type...
+            </option>
+            {EVENT_TYPES.map((et) => (
+              <option key={et.value} value={et.value}>
+                {et.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+        </div>
+      </div>
+
+      {/* Event Date */}
+      <div className="space-y-2 md:col-span-2">
+        <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+          <Calendar className="w-3 h-3" /> Event Date *
+        </label>
+        <input
+          type="date"
+          value={form.eventDate}
+          onChange={(e) => setForm((f) => ({ ...f, eventDate: e.target.value }))}
+          min={new Date().toISOString().split("T")[0]}
+          required
+          className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
 
       {/* Status */}
       <div className="space-y-2">
@@ -488,6 +469,11 @@ export default function DashboardPage() {
 
   const [createForm, setCreateForm] = useState<ProjectForm>(EMPTY_FORM);
   const [editForm,   setEditForm]   = useState<ProjectForm>(EMPTY_FORM);
+  const [venueSelectorProject, setVenueSelectorProject] = useState<{
+    id: string;
+    eventType: string;
+    eventDate: string;
+  } | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -546,9 +532,10 @@ export default function DashboardPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await createProject({
+      const created = await createProject({
         name: createForm.name, client: createForm.client,
         event: createForm.event, eventType: createForm.eventType,
+        eventDate: createForm.eventDate,
         location: createForm.location, status: createForm.status,
         budget: createForm.budget ? parseFloat(createForm.budget) : 0,
         currency: createForm.currency, billingStatus: createForm.billingStatus,
@@ -556,6 +543,13 @@ export default function DashboardPage() {
       setIsCreateOpen(false);
       setCreateForm(EMPTY_FORM);
       toast.success("Project created!");
+      if (created?._id) {
+        setVenueSelectorProject({
+          id: created._id,
+          eventType: created.eventType ?? createForm.eventType,
+          eventDate: createForm.eventDate || (created.eventDate ? new Date(created.eventDate).toISOString().slice(0, 10) : ""),
+        });
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -571,6 +565,7 @@ export default function DashboardPage() {
       await updateProject(editProject._id, {
         name: editForm.name, client: editForm.client,
         event: editForm.event, eventType: editForm.eventType,
+        eventDate: editForm.eventDate,
         location: editForm.location, status: editForm.status,
         budget: editForm.budget ? parseFloat(editForm.budget) : 0,
         currency: editForm.currency, billingStatus: editForm.billingStatus,
@@ -627,10 +622,37 @@ export default function DashboardPage() {
     }
   };
 
+  const handleVenueSelect = async (venue: Venue) => {
+    if (!venueSelectorProject) return;
+    try {
+      await updateProject(venueSelectorProject.id, { venueId: venue.id });
+      toast.success("Venue selected");
+      setVenueSelectorProject(null);
+      router.push(`/editor?id=${venueSelectorProject.id}`);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleVenueSkip = () => {
+    if (!venueSelectorProject) return;
+    router.push(`/editor?id=${venueSelectorProject.id}`);
+    setVenueSelectorProject(null);
+  };
+
   if (authLoading || !isLoggedIn) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
+      {venueSelectorProject && (
+        <VenueSelector
+          projectId={venueSelectorProject.id}
+          eventType={venueSelectorProject.eventType}
+          eventDate={venueSelectorProject.eventDate}
+          onVenueSelect={handleVenueSelect}
+          onSkip={handleVenueSkip}
+        />
+      )}
 
       {/* ── Header ── */}
       <motion.header initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
@@ -818,8 +840,18 @@ export default function DashboardPage() {
                   )}
                   <div className="flex items-center gap-3 text-xs text-zinc-400 dark:text-zinc-500 pt-2 border-t border-zinc-100 dark:border-zinc-800">
                     <div className="flex items-center gap-1">
-                      <Layers className="w-3 h-3" />
-                      {project.sceneCount ?? 0} scene{(project.sceneCount ?? 0) !== 1 ? "s" : ""}
+                      <span className="text-lg leading-none">📅</span>
+                      {project.eventDate ? (
+                        <span>
+                          {new Date(project.eventDate).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </span>
+                      ) : (
+                        <span>No date set</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 ml-auto">
                       <Clock className="w-3 h-3" />
@@ -870,7 +902,18 @@ export default function DashboardPage() {
                   <td className="px-5 py-4 text-zinc-600 dark:text-zinc-400">{project.client || <span className="text-zinc-300 dark:text-zinc-700">—</span>}</td>
                   <td className="px-5 py-4 text-zinc-600 dark:text-zinc-400">{project.event  || <span className="text-zinc-300 dark:text-zinc-700">—</span>}</td>
                   <td className="px-5 py-4 text-zinc-400 dark:text-zinc-500 whitespace-nowrap">
-                    {formatDistanceToNow(new Date(project.updatedAt), { addSuffix:true })}
+                    {project.eventDate ? (
+                      <>
+                        📅{" "}
+                        {new Date(project.eventDate).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </>
+                    ) : (
+                      "📅 No date set"
+                    )}
                   </td>
                   <td className="px-5 py-4"><StatusBadge status={project.status} /></td>
                   <td className="px-5 py-4">

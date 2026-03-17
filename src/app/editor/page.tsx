@@ -21,7 +21,8 @@ import { PanoramaViewerHandle } from "@/components/PanoramaViewer";
 import { exportProjectToPdf } from "@/lib/exportPdf";
 import AIChatbot from "@/components/AIChatbot";
 import AIAutoDesign from "@/components/AIAutoDesign";
-import AILogoIntegration from "@/components/AILogoIntegration";
+import LogoIntegration from "@/components/LogoIntegration";
+import { VENUES } from "@/lib/venues";
 
 const BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
 
@@ -81,6 +82,7 @@ function Editor() {
   const [projectName, setProjectName] = useState("Untitled Project");
   const [eventType, setEventType] = useState("Wedding");
   const [sceneIndex, setSceneIndex] = useState(0);
+  const [venueId, setVenueId] = useState<string | null>(null);
     const [furniturePanelOpen, setFurniturePanelOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -224,7 +226,43 @@ function Editor() {
         width: item.defaultWidth,
         height: item.defaultHeight,
         facing: "front",
+        brandedSrc: undefined,
       };
+      setPlacedItems([...placedItems, newItem]);
+    },
+    [placedItems, setPlacedItems]
+  );
+
+  const handleInsertBrandedFurniture = useCallback(
+    (item: FurnitureItem, brandedSrc: string) => {
+      const view = panoramaRef.current?.getView();
+      const container = panoramaRef.current?.getContainer();
+
+      let yaw = view ? view.yaw() : 0;
+      let pitch = view ? view.pitch() : 0;
+
+      if (view && container) {
+        const rect = container.getBoundingClientRect();
+        const sx = rect.width * 0.45;
+        const sy = rect.height * 0.5;
+        const world = view.screenToCoordinates({ x: sx, y: sy });
+        if (world) {
+          yaw = world.yaw;
+          pitch = world.pitch;
+        }
+      }
+
+      const newItem: PlacedItem = {
+        uid: nextUid(),
+        item,
+        yaw,
+        pitch,
+        width: item.defaultWidth,
+        height: item.defaultHeight,
+        facing: "front",
+        brandedSrc,
+      };
+
       setPlacedItems([...placedItems, newItem]);
     },
     [placedItems, setPlacedItems]
@@ -435,6 +473,7 @@ function Editor() {
 
   const scenes: Scene[] = EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"];
   const currentScene = scenes[sceneIndex];
+  const venue = venueId ? VENUES.find((v) => v.id === venueId) : null;
 
   useEffect(() => {
     if (!projectId) return;
@@ -456,30 +495,39 @@ function Editor() {
       }
     };
 
+    const applyProject = (data: { name?: string; eventType?: string; venueId?: string; budget?: number; data?: any }) => {
+      setProjectName(data.name ?? "Untitled Project");
+      const et = data.eventType ?? "Wedding";
+      setEventType(et);
+      setVenueId(data.venueId ?? null);
+      const venue = data.venueId ? VENUES.find((v) => v.id === data.venueId) : null;
+      setSceneIndex(venue != null ? venue.sceneIndex : 0);
+      setBudget(data.budget ?? 0);
+      restoreData(data.data);
+    };
+
     const local = projects.find((p) => p._id === projectId);
-      if (local) {
-        setProjectName(local.name);
-        setEventType(local.eventType ?? "Wedding");
-        setSceneIndex(0);
-        setBudget(local.budget ?? 0);
-        restoreData((local as any).data);
-        return;
-      }
-      if (!token) return;
-      fetch(`/api/projects/${projectId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+    if (local) {
+      applyProject({
+        name: local.name,
+        eventType: local.eventType,
+        venueId: (local as any).venueId,
+        budget: local.budget,
+        data: (local as any).data,
+      });
+      return;
+    }
+    if (!token) return;
+    fetch(`/api/projects/${projectId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data._id) {
+          applyProject(data);
+        }
       })
-        .then((r) => r.json())
-        .then((data) => {
-          if (data._id) {
-            setProjectName(data.name);
-            setEventType(data.eventType ?? "Wedding");
-            setSceneIndex(0);
-            setBudget(data.budget ?? 0);
-            restoreData(data.data);
-          }
-        })
-        .catch(() => {});
+      .catch(() => {});
   }, [projectId, projects, token]);
 
   // Build chatbot context from all scenes
@@ -509,7 +557,8 @@ function Editor() {
           <div>
             <h1 className="font-bold text-zinc-900 text-sm leading-tight">{projectName}</h1>
             <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider leading-none mt-0.5">
-              {EVENT_LABELS[eventType] ?? eventType} · {currentScene.label}
+              {EVENT_LABELS[eventType] ?? eventType}
+              {venue ? ` · ${venue.name}` : ""} · {currentScene.label}
             </p>
           </div>
         </div>
@@ -595,11 +644,8 @@ function Editor() {
               currentItems={placedItems}
             />
 
-            {/* AI Logo Integration */}
-            <AILogoIntegration
-              placedItems={placedItems}
-              onApply={setPlacedItems}
-            />
+            {/* Logo Integration */}
+            <LogoIntegration onInsert={handleInsertBrandedFurniture} />
 
             {/* AI Asset Advisor / Chatbot */}
             <AIChatbot

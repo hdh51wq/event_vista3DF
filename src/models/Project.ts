@@ -5,6 +5,7 @@ export interface IProject extends Document {
   client: string;
   event: string;
   eventType: 'Wedding' | 'Conference' | 'Gala Dinner';
+  eventDate?: Date;
   location: string;
   status: 'Draft' | 'In Progress' | 'Review' | 'Final';
   thumbnail: string;
@@ -12,6 +13,7 @@ export interface IProject extends Document {
   budget: number;
   currency: string;
   billingStatus: 'pending' | 'paid' | 'cancelled';
+  venueId?: string;
   data?: any;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -23,7 +25,8 @@ const ProjectSchema: Schema = new Schema(
     name:          { type: String, required: true },
     client:        { type: String },
     event:         { type: String },
-      eventType:     { type: String, enum: ['Wedding', 'Conference', 'Gala Dinner'], default: 'Wedding' },
+    eventType:     { type: String, enum: ['Wedding', 'Conference', 'Gala Dinner'], default: 'Wedding' },
+    eventDate:     { type: Date, required: false },
     location:      { type: String },
     status:        { type: String, enum: ['Draft', 'In Progress', 'Review', 'Final'], default: 'Draft' },
     thumbnail:     { type: String, default: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=800&auto=format&fit=crop' },
@@ -31,6 +34,7 @@ const ProjectSchema: Schema = new Schema(
     budget:        { type: Number, default: 0 },
     currency:      { type: String, default: 'USD' },
     billingStatus: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
+    venueId:       { type: String, required: false },
     data:          { type: Schema.Types.Mixed },
     userId:        { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },

@@ -25,13 +25,48 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = (view: string, file: File | null) => {
+  function validatePNG(file: File): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (file.type !== "image/png") {
+        resolve("Please upload a PNG file only.");
+        return;
+      }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+        const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let hasTransparency = false;
+        for (let i = 3; i < data.length; i += 4) {
+          if (data[i] < 255) {
+            hasTransparency = true;
+            break;
+          }
+        }
+        URL.revokeObjectURL(url);
+        if (!hasTransparency) {
+          resolve(
+            "Image must have a transparent background (PNG-24). Please remove the background first."
+          );
+        } else {
+          resolve(null); // valid
+        }
+      };
+      img.src = url;
+    });
+  }
+
+  const handleFileChange = async (view: string, file: File | null) => {
     if (!file) return;
 
-    // Validation
-    const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
-    if (!validTypes.includes(file.type)) {
-      setError(`Invalid file type for ${view}. Only PNG, JPG, and SVG are allowed.`);
+    // Validate PNG-24 with transparency
+    const validationError = await validatePNG(file);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -201,8 +236,8 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
                           <input
                             type="file"
                             className="hidden"
-                            accept="image/png,image/jpeg,image/svg+xml"
-                            onChange={(e) => handleFileChange(view, e.target.files?.[0] || null)}
+                            accept="image/png"
+                            onChange={(e) => void handleFileChange(view, e.target.files?.[0] || null)}
                           />
                           <Upload className="w-6 h-6 text-white/20 mb-2 group-hover:text-white/40 transition-colors" />
                           <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
