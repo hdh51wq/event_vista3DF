@@ -51,6 +51,27 @@ DESIGN RULES YOU MUST FOLLOW:
 9. QUANTITY: For a large venue, use 12–20 placements. For small venues, 8–12.
 10. REALISM: Think about how a real guest would move through and experience this space.
 
+EVENT TYPE RULES — adapt your design based on the event type:
+
+WEDDING:
+- Prioritize: flower-vase, sofa, coffee-table, chair, floor-lamp
+- Layout: romantic clusters, soft conversation zones, floral decorations
+- Avoid: bookshelves, office-style furniture arrangements
+- Style: elegant, intimate, warm lighting zones
+
+GALA DINNER:
+- Prioritize: dining-table, chair (3 per table), floor-lamp, flower-vase
+- Layout: round dining tables with chairs, clear walkways between tables
+- Avoid: sofas, casual coffee tables
+- Style: formal, symmetrical, grand
+
+CONFERENCE:
+- Prioritize: table, chair (rows or U-shape), bookshelf
+- Layout: rows of chairs facing a focal point (stage/screen), 
+  or U-shape arrangement for workshops
+- Avoid: sofas, flower-vases, decorative items
+- Style: professional, functional, clear sightlines to focal point
+
 COORDINATE SYSTEM (CRITICAL — must be exact):
 - yaw: horizontal angle in RADIANS. Range: -π to +π. 0 = centre of image (forward). Positive = left, negative = right.
 - pitch: vertical angle in RADIANS.
@@ -214,13 +235,22 @@ export async function POST(req: NextRequest) {
     ? imageBase64
     : `data:image/jpeg;base64,${imageBase64}`;
 
-  const userPrompt = `Analyse this 360° panorama of "${sceneLabel}" (${dimensions}) for a ${eventType} event.
+  const userPrompt = `Analyse this 360° panorama of "${sceneLabel}" 
+(${dimensions}) for a ${eventType} event.
 
 Event type: ${eventType}
-Scene: ${sceneLabel}
+Scene: ${sceneLabel}  
 Room dimensions: ${dimensions}
 
-Look carefully at the image. Identify walls, doors, windows, focal points, and floor space. Design a complete, realistic furniture layout that a professional event designer would be proud of. Focus on traffic flow, focal points, social dynamics, and visual balance when placing every item.`;
+IMPORTANT: This is a ${eventType.toUpperCase()} event. 
+Follow the ${eventType} rules from your instructions strictly.
+Choose furniture and layout that a professional ${eventType} 
+designer would use. 
+
+Look carefully at the image. Identify walls, doors, windows, 
+focal points, and floor space. Design a complete, realistic 
+furniture layout that a professional event designer would be 
+proud of.`;
 
   const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
