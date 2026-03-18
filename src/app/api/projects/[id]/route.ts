@@ -40,6 +40,7 @@ export async function PATCH(
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
     }
+    if (body.customScenes !== undefined) update.customScenes = body.customScenes;
 
     const project = await Project.findOneAndUpdate(
       { _id: id, userId },

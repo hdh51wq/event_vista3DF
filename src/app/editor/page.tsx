@@ -22,6 +22,7 @@ import { exportProjectToPdf } from "@/lib/exportPdf";
 import AIChatbot from "@/components/AIChatbot";
 import AIAutoDesign from "@/components/AIAutoDesign";
 import LogoIntegration from "@/components/LogoIntegration";
+import SceneImportModal from "@/components/SceneImportModal";
 import { VENUES } from "@/lib/venues";
 
 const BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
@@ -32,7 +33,16 @@ type Scene = {
   dimensions?: string;
   setupTimeline?: string;
   rentPrice?: number;
+  isCustom?: boolean;
 };
+
+interface CustomScene {
+  name: string;
+  src: string;
+  width: number;
+  height: number;
+  isCustom: true;
+}
 
 const EVENT_SCENES: Record<string, Scene[]> = {
   Wedding: [
@@ -83,14 +93,15 @@ function Editor() {
   const [eventType, setEventType] = useState("Wedding");
   const [sceneIndex, setSceneIndex] = useState(0);
   const [venueId, setVenueId] = useState<string | null>(null);
-    const [furniturePanelOpen, setFurniturePanelOpen] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-    const [isExportingPdf, setIsExportingPdf] = useState(false);
-    const [isSharing, setIsSharing] = useState(false);
-  
-    const [placedItemsMap, setPlacedItemsMap] = useState<Record<string, PlacedItem[]>>({});
+  const [furniturePanelOpen, setFurniturePanelOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [showSceneImport, setShowSceneImport] = useState(false);
+  const [placedItemsMap, setPlacedItemsMap] = useState<Record<string, PlacedItem[]>>({});
   const [budget, setBudget] = useState(0);
+  const [customScenes, setCustomScenes] = useState<CustomScene[]>([]);
 
 
   const sceneKey = `${eventType}::${sceneIndex}`;
@@ -471,8 +482,19 @@ function Editor() {
     setTimeout(() => setIsSharing(false), 2000);
   }, [projectId]);
 
-  const scenes: Scene[] = EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"];
-  const currentScene = scenes[sceneIndex];
+  const defaultScenes: Scene[] = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).map(
+    (s) => ({ ...s, isCustom: false })
+  );
+  const allScenes: Scene[] = [
+    ...defaultScenes,
+    ...customScenes.map((cs) => ({
+      label: cs.name,
+      src: cs.src,
+      dimensions: `${cs.width}×${cs.height}px`,
+      isCustom: true as const,
+    })),
+  ];
+  const currentScene = allScenes[sceneIndex] ?? allScenes[0];
   const venue = venueId ? VENUES.find((v) => v.id === venueId) : null;
 
   useEffect(() => {
@@ -495,7 +517,7 @@ function Editor() {
       }
     };
 
-    const applyProject = (data: { name?: string; eventType?: string; venueId?: string; budget?: number; data?: any }) => {
+    const applyProject = (data: { name?: string; eventType?: string; venueId?: string; budget?: number; data?: any; customScenes?: Array<{ name: string; src: string; width?: number; height?: number }> }) => {
       setProjectName(data.name ?? "Untitled Project");
       const et = data.eventType ?? "Wedding";
       setEventType(et);
@@ -504,6 +526,19 @@ function Editor() {
       setSceneIndex(venue != null ? venue.sceneIndex : 0);
       setBudget(data.budget ?? 0);
       restoreData(data.data);
+      if (data.customScenes?.length) {
+        setCustomScenes(
+          data.customScenes.map((cs) => ({
+            name: cs.name,
+            src: cs.src,
+            width: cs.width ?? 0,
+            height: cs.height ?? 0,
+            isCustom: true as const,
+          }))
+        );
+      } else {
+        setCustomScenes([]);
+      }
     };
 
     const local = projects.find((p) => p._id === projectId);
@@ -531,12 +566,99 @@ function Editor() {
   }, [projectId, projects, token]);
 
   // Build chatbot context from all scenes
-  const aiScenes = scenes.map((scene, idx) => ({
+  const aiScenes = allScenes.map((scene, idx) => ({
     label: scene.label,
     dimensions: scene.dimensions,
     rentPrice: scene.rentPrice,
     items: placedItemsMap[`${eventType}::${idx}`] ?? [],
   }));
+
+  function handleSceneImport(scene: Omit<CustomScene, "isCustom">) {
+    if (customScenes.length >= 3) {
+      setShowSceneImport(false);
+      return;
+    }
+    const newScene: CustomScene = { ...scene, isCustom: true };
+    const updated = [...customScenes, newScene];
+    setCustomScenes(updated);
+    setSceneIndex(defaultScenes.length + customScenes.length);
+    setShowSceneImport(false);
+
+    if (projectId && token) {
+      fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ customScenes: updated }),
+      }).catch(() => {});
+    }
+  }
+
+  function removeCustomScene(index: number) {
+    if (
+      !confirm(
+        "Remove this custom scene? Any furniture placed in it will be lost."
+      )
+    )
+      return;
+
+    const baseLength = defaultScenes.length;
+    const removedGlobalIndex = baseLength + index;
+
+    // Remove placed items for the removed scene AND shift any later custom-scene keys down by 1.
+    setPlacedItemsMap((prev) => {
+      const next: Record<string, PlacedItem[]> = {};
+      for (const [key, value] of Object.entries(prev)) {
+        const prefix = `${eventType}::`;
+        if (!key.startsWith(prefix)) {
+          next[key] = value;
+          continue;
+        }
+
+        const idxStr = key.slice(prefix.length);
+        const idx = Number.parseInt(idxStr, 10);
+        if (!Number.isFinite(idx)) {
+          next[key] = value;
+          continue;
+        }
+
+        if (idx === removedGlobalIndex) {
+          // drop this scene's items
+          continue;
+        }
+
+        if (idx > removedGlobalIndex) {
+          // shift down to keep indices aligned with allScenes
+          next[`${prefix}${idx - 1}`] = value;
+          continue;
+        }
+
+        next[key] = value;
+      }
+      return next;
+    });
+
+    const updatedCustomScenes = customScenes.filter((_, i) => i !== index);
+    setCustomScenes(updatedCustomScenes);
+
+    // If currently viewing the removed scene (or any custom scene at/after it), go back to last default scene
+    if (sceneIndex >= baseLength + index) {
+      setSceneIndex(Math.max(0, baseLength - 1));
+    }
+
+    if (projectId && token) {
+      fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ customScenes: updatedCustomScenes }),
+      }).catch(() => {});
+    }
+  }
 
   return (
     <div className="h-[calc(100vh-112px)] flex flex-col overflow-hidden">
@@ -710,7 +832,27 @@ function Editor() {
             >
               {/* Scene label + meta */}
               <div className="min-w-0">
-                <p className="text-[11px] font-bold text-white leading-none truncate">{currentScene.label}</p>
+                <div className="flex items-center gap-1 min-w-0">
+                  <p className="text-[11px] font-bold text-white leading-none truncate">
+                    {currentScene.label}
+                  </p>
+                  {currentScene?.isCustom && (
+                    <>
+                      <span className="px-1.5 py-0.5 rounded-full border border-white/30 text-[8px] uppercase tracking-wider text-white/80">
+                        Custom
+                      </span>
+                      <button
+                        onClick={() => {
+                          const baseLength = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).length;
+                          removeCustomScene(sceneIndex - baseLength);
+                        }}
+                        className="text-[10px] px-2 py-1 rounded-md border border-dashed border-red-400/60 text-red-400 hover:bg-red-500/10 transition-colors ml-2"
+                      >
+                        Remove scene
+                      </button>
+                    </>
+                  )}
+                </div>
                 <p className="text-[9px] text-white/55 mt-0.5 leading-none">
                   {currentScene.dimensions ?? "—"} · {eventType}
                   {currentScene.rentPrice ? ` · €${currentScene.rentPrice.toLocaleString()}/day` : ""}
@@ -718,35 +860,69 @@ function Editor() {
               </div>
               {/* Divider */}
               <div className="w-px h-7 bg-white/15 shrink-0" />
-              {/* Mini scene switcher */}
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setSceneIndex(Math.max(0, sceneIndex - 1))}
-                  disabled={sceneIndex === 0}
-                  className="w-5 h-5 flex items-center justify-center rounded-md text-white/60 hover:text-white disabled:opacity-25 transition-colors"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                {scenes.map((_, i) => (
+              {/* Mini scene switcher + import */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1">
                   <button
-                    key={i}
-                    onClick={() => setSceneIndex(i)}
-                    className={`w-5 h-5 rounded-md text-[9px] font-bold transition-all ${
-                      i === sceneIndex
-                        ? "bg-white/25 text-white"
-                        : "text-white/40 hover:text-white/70"
-                    }`}
+                    onClick={() => setSceneIndex(Math.max(0, sceneIndex - 1))}
+                    disabled={sceneIndex === 0}
+                    className="w-5 h-5 flex items-center justify-center rounded-md text-white/60 hover:text-white disabled:opacity-25 transition-colors"
                   >
-                    {i + 1}
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                ))}
+                  {allScenes.map((scene, i) => {
+                    const baseLength = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).length;
+                    const isCustom = i >= baseLength;
+                    const customIndex = i - baseLength;
+
+                    return (
+                      <div key={i} className="relative inline-block">
+                        <button
+                          onClick={() => setSceneIndex(i)}
+                          className={`w-5 h-5 rounded-md text-[9px] font-bold transition-all ${
+                            i === sceneIndex
+                              ? "bg-white/25 text-white"
+                              : "text-white/40 hover:text-white/70"
+                          } ${isCustom ? "border border-blue-400/60" : ""}`}
+                        >
+                          {i + 1}
+                        </button>
+
+                        {isCustom && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeCustomScene(customIndex);
+                            }}
+                            className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-[9px] font-bold z-10 transition-colors"
+                            title="Remove this scene"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <button
+                    onClick={() => setSceneIndex(Math.min(allScenes.length - 1, sceneIndex + 1))}
+                    disabled={sceneIndex === allScenes.length - 1}
+                    className="w-5 h-5 flex items-center justify-center rounded-md text-white/60 hover:text-white disabled:opacity-25 transition-colors"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <button
-                  onClick={() => setSceneIndex(Math.min(scenes.length - 1, sceneIndex + 1))}
-                  disabled={sceneIndex === scenes.length - 1}
-                  className="w-5 h-5 flex items-center justify-center rounded-md text-white/60 hover:text-white disabled:opacity-25 transition-colors"
+                  onClick={() => setShowSceneImport(true)}
+                  disabled={customScenes.length >= 3}
+                  className="text-[10px] px-3 py-1 rounded-md border border-dashed border-white/40 text-white/80 hover:bg-white/10 hover:border-white/70 transition-colors"
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  + Import Scene
                 </button>
+                {customScenes.length >= 3 && (
+                  <span className="text-[9px] text-red-400/80 ml-1">
+                    Max 3 custom scenes reached
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -795,6 +971,12 @@ function Editor() {
           />
 
           <HintOverlay />
+
+          <SceneImportModal
+            isOpen={showSceneImport}
+            onClose={() => setShowSceneImport(false)}
+            onImport={handleSceneImport}
+          />
         </div>
       </div>
     </div>

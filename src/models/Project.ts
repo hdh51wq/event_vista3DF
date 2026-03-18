@@ -14,6 +14,12 @@ export interface IProject extends Document {
   currency: string;
   billingStatus: 'pending' | 'paid' | 'cancelled';
   venueId?: string;
+  customScenes?: Array<{
+    name: string;
+    src: string;
+    width?: number;
+    height?: number;
+  }>;
   data?: any;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
@@ -35,6 +41,14 @@ const ProjectSchema: Schema = new Schema(
     currency:      { type: String, default: 'USD' },
     billingStatus: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
     venueId:       { type: String, required: false },
+    customScenes: [
+      {
+        name: { type: String, required: true },
+        src: { type: String, required: true }, // base64 string
+        width: { type: Number },
+        height: { type: Number },
+      },
+    ],
     data:          { type: Schema.Types.Mixed },
     userId:        { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
