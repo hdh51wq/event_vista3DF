@@ -7,6 +7,19 @@ import { useAuth } from "@/lib/AuthContext";
 import { Venue, VENUES } from "@/lib/venues";
 import { cn } from "@/lib/utils";
 
+function venuesMatchingEventType(eventType: string) {
+  return VENUES.filter(
+    (v) =>
+      !v.eventTypes ||
+      v.eventTypes.length === 0 ||
+      (v.eventTypes as string[]).includes(eventType)
+  );
+}
+
+function fallbackVenuesForEvent(eventType: string): VenueWithAvailability[] {
+  return venuesMatchingEventType(eventType).map((v) => ({ ...v, available: true }));
+}
+
 export type VenueWithAvailability = Venue & { available: boolean; bookedBy?: string };
 
 export interface VenueSelectorProps {
@@ -54,29 +67,33 @@ export default function VenueSelector({
 
   useEffect(() => {
     if (!dateParam || !token) {
-      setVenues(VENUES.map((v) => ({ ...v, available: true })));
+      setVenues(fallbackVenuesForEvent(eventType));
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
-    fetch(
-      `/api/venues?date=${encodeURIComponent(dateParam)}&projectId=${encodeURIComponent(projectId)}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
+    const qs = new URLSearchParams({
+      date: dateParam,
+      projectId,
+      eventType,
+    });
+    fetch(`/api/venues?${qs}`, { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => {
         if (!r.ok) throw new Error(r.status === 401 ? "Unauthorized" : "Failed to load venues");
         return r.json();
       })
       .then((data) => {
-        setVenues(data.venues ?? VENUES.map((v) => ({ ...v, available: true })));
+        setVenues(
+          data.venues?.length ? data.venues : fallbackVenuesForEvent(eventType)
+        );
       })
       .catch((err) => {
         setError(err.message || "Something went wrong");
-        setVenues(VENUES.map((v) => ({ ...v, available: true })));
+        setVenues(fallbackVenuesForEvent(eventType));
       })
       .finally(() => setLoading(false));
-  }, [dateParam, projectId, token]);
+  }, [dateParam, projectId, token, eventType]);
 
   return (
     <AnimatePresence>
@@ -164,6 +181,18 @@ export default function VenueSelector({
                       <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
                         {v.name}
                       </h3>
+                      {v.eventTypes && v.eventTypes.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {v.eventTypes.map((et) => (
+                            <span
+                              key={et}
+                              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-200/50 dark:border-coral-800/50"
+                            >
+                              {et}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       <div className="mt-2 space-y-1 text-sm text-zinc-500 dark:text-zinc-400">
                         <p className="flex items-center gap-2">
                           <MapPin className="w-3.5 h-3.5 shrink-0" />

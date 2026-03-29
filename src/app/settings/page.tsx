@@ -15,10 +15,23 @@ import {
   Trash2,
   CheckCircle2,
   AlertTriangle,
+  BarChart3,
+  Users,
+  Armchair,
 } from "lucide-react";
+import AdminSettingsPanel, { type AdminSettingsTab } from "@/components/AdminSettingsPanel";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
+
+type SettingsSection =
+  | "profile"
+  | "security"
+  | "danger"
+  | "admin-overview"
+  | "admin-users"
+  | "admin-scenes"
+  | "admin-furniture";
 
 function InputField({
   label,
@@ -82,8 +95,10 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
 }
 
 export default function SettingsPage() {
-  const { user, saveProfile, deleteAccount, logout, isLoggedIn, loading } = useAuth();
+  const { user, token, saveProfile, deleteAccount, logout, isLoggedIn, loading } = useAuth();
   const router = useRouter();
+  const isAdmin = user?.role === "admin";
+  const [section, setSection] = useState<SettingsSection>("profile");
 
   // Profile fields
   const [name, setName] = useState("");
@@ -130,7 +145,52 @@ export default function SettingsPage() {
     if (!loading && !isLoggedIn) router.push("/login");
   }, [loading, isLoggedIn, router]);
 
+  useEffect(() => {
+    if (!isAdmin && section.startsWith("admin-")) setSection("profile");
+  }, [isAdmin, section]);
+
   if (loading || !isLoggedIn) return null;
+
+  const adminTab: AdminSettingsTab =
+    section === "admin-overview"
+      ? "overview"
+      : section === "admin-users"
+        ? "users"
+        : section === "admin-scenes"
+          ? "scenes"
+          : section === "admin-furniture"
+            ? "furniture"
+            : "overview";
+
+  const goAdmin = (t: AdminSettingsTab) => {
+    if (t === "overview") setSection("admin-overview");
+    else if (t === "users") setSection("admin-users");
+    else if (t === "scenes") setSection("admin-scenes");
+    else setSection("admin-furniture");
+  };
+
+  const NavBtn = ({
+    id,
+    label,
+    icon: Icon,
+  }: {
+    id: SettingsSection;
+    label: string;
+    icon: React.ElementType;
+  }) => (
+    <button
+      type="button"
+      onClick={() => setSection(id)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all text-left ${
+        section === id
+          ? "bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-200/60 dark:border-coral-800/60"
+          : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/80 border border-transparent"
+      }`}
+    >
+      <Icon className="w-4 h-4 shrink-0 opacity-80" />
+      {label}
+    </button>
+  );
 
   const handleSaveProfile = async () => {
     setProfileSaving(true);
@@ -267,21 +327,55 @@ export default function SettingsPage() {
         )}
       </AnimatePresence>
 
-      <div className="max-w-4xl mx-auto px-6 py-12">
+      <div className="max-w-6xl mx-auto px-6 py-12">
         <motion.header
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          className="mb-10"
         >
           <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">Settings</h1>
-          <p className="text-zinc-500 dark:text-zinc-400">Manage your profile, security, and account preferences</p>
+          <p className="text-zinc-500 dark:text-zinc-400">
+            Manage your profile, security{isAdmin ? ", and platform admin tools" : ""}.
+          </p>
         </motion.header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* ── Left column: main sections ── */}
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <aside className="lg:col-span-3 space-y-2">
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1 mb-1">Account</p>
+            <NavBtn id="profile" label="Profile" icon={User} />
+            <NavBtn id="security" label="Security" icon={Lock} />
+            <NavBtn id="danger" label="Danger zone" icon={AlertTriangle} />
+            {isAdmin && (
+              <>
+                <div className="pt-4 pb-1">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Admin</p>
+                </div>
+                <NavBtn id="admin-overview" label="Overview" icon={BarChart3} />
+                <NavBtn id="admin-users" label="Users" icon={Users} />
+                <NavBtn id="admin-scenes" label="Scenes" icon={Building2} />
+                <NavBtn id="admin-furniture" label="Furniture" icon={Armchair} />
+              </>
+            )}
+            <div className="glass-card p-5 rounded-2xl mt-6 space-y-3">
+              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 text-sm">Logged in as</h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email}</p>
+              <button
+                type="button"
+                onClick={logout}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all text-xs"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Logout
+              </button>
+            </div>
+          </aside>
 
-            {/* Profile Information */}
+          <div className="lg:col-span-9 space-y-6">
+            {section.startsWith("admin-") && isAdmin && token ? (
+              <AdminSettingsPanel token={token} tab={adminTab} onNavigate={goAdmin} />
+            ) : (
+              <>
+                {section === "profile" && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -316,8 +410,9 @@ export default function SettingsPage() {
                 </button>
               </div>
             </motion.div>
+                )}
 
-            {/* Security */}
+                {section === "security" && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -374,8 +469,9 @@ export default function SettingsPage() {
                 </button>
               </div>
             </motion.div>
+                )}
 
-            {/* Danger Zone */}
+            {section === "danger" && (
             <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -397,40 +493,9 @@ export default function SettingsPage() {
                 Delete Account
               </button>
             </motion.div>
-          </div>
-
-          {/* ── Right column: sidebar cards ── */}
-          <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="glass-card p-6"
-            >
-              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 mb-1">Logged in as</h3>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 truncate">{user?.email}</p>
-              <button
-                onClick={logout}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all text-sm"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="p-6 bg-zinc-900 rounded-3xl text-white"
-            >
-              <h3 className="font-bold mb-2">Need Help?</h3>
-              <p className="text-sm text-zinc-400 mb-4">
-                Contact our support team for any technical assistance.
-              </p>
-              <button className="text-sm font-semibold text-coral-400 hover:text-coral-300 transition-colors">
-                Submit a ticket →
-              </button>
-            </motion.div>
+            )}
+              </>
+            )}
           </div>
         </div>
       </div>

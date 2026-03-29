@@ -17,7 +17,7 @@ import {
   Play,
 } from "lucide-react";
 import { PlacedItem } from "@/components/SceneOverlay";
-import { FURNITURE_ITEMS } from "@/lib/furniture";
+import { FALLBACK_FURNITURE_ITEMS, type FurnitureItem } from "@/lib/furniture";
 import type { VisualDesignResponse, PlacementSuggestion } from "@/app/api/ai-visual-design/route";
 
 interface AIAutoDesignProps {
@@ -33,6 +33,8 @@ interface AIAutoDesignProps {
   onApply: (items: PlacedItem[]) => void;
   /** Existing placed items (to merge or replace) */
   currentItems: PlacedItem[];
+  /** Furniture catalogue (Mongo/API or fallback) */
+  catalog?: FurnitureItem[];
 }
 
 type Step = "idle" | "capturing" | "analysing" | "preview" | "placing" | "done" | "error";
@@ -42,10 +44,13 @@ function nextUid() {
   return `ai-${++uidSeed}`;
 }
 
-function convertSuggestionToPlacedItems(suggestions: PlacementSuggestion[]): PlacedItem[] {
+function convertSuggestionToPlacedItems(
+  suggestions: PlacementSuggestion[],
+  catalog: FurnitureItem[]
+): PlacedItem[] {
   const result: PlacedItem[] = [];
   for (const suggestion of suggestions) {
-    const furnitureItem = FURNITURE_ITEMS.find((f) => f.id === suggestion.id);
+    const furnitureItem = catalog.find((f) => f.id === suggestion.id);
     if (!furnitureItem) continue;
     for (const placement of suggestion.placements) {
       result.push({
@@ -102,8 +107,14 @@ function StepIndicator({ step }: { step: Step }) {
   );
 }
 
-function RecommendationCard({ suggestion }: { suggestion: PlacementSuggestion }) {
-  const item = FURNITURE_ITEMS.find((f) => f.id === suggestion.id);
+function RecommendationCard({
+  suggestion,
+  catalog,
+}: {
+  suggestion: PlacementSuggestion;
+  catalog: FurnitureItem[];
+}) {
+  const item = catalog.find((f) => f.id === suggestion.id);
   const total = (item?.price ?? 0) * suggestion.quantity;
 
   return (
@@ -138,6 +149,7 @@ export default function AIAutoDesign({
   dimensions,
   onApply,
   currentItems,
+  catalog = FALLBACK_FURNITURE_ITEMS,
 }: AIAutoDesignProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("idle");
@@ -224,7 +236,7 @@ export default function AIAutoDesign({
     if (!result) return;
     setStep("placing");
 
-    const newItems = convertSuggestionToPlacedItems(result.recommendations ?? []);
+    const newItems = convertSuggestionToPlacedItems(result.recommendations ?? [], catalog);
 
     // ── Diagnostic: log final PlacedItem coordinates ─────────────────────
     console.group("%c[AIAutoDesign] PlacedItems written to scene", "color: #34d399; font-weight: bold");
@@ -248,7 +260,7 @@ export default function AIAutoDesign({
       }
       setStep("done");
     }, 600);
-  }, [result, mergeMode, currentItems, onApply]);
+  }, [result, mergeMode, currentItems, onApply, catalog]);
 
   const totalPlacements =
     result?.recommendations?.reduce((sum, r) => sum + (r.placements?.length ?? 0), 0) ?? 0;
@@ -454,7 +466,7 @@ export default function AIAutoDesign({
                   </div>
                   <div className="flex flex-col gap-2 max-h-52 overflow-y-auto scrollbar-hide">
                     {(result.recommendations ?? []).map((rec, i) => (
-                      <RecommendationCard key={i} suggestion={rec} />
+                      <RecommendationCard key={i} suggestion={rec} catalog={catalog} />
                     ))}
                   </div>
                 </div>

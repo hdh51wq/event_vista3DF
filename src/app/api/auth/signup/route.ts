@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       name,
       email,
       password: hashedPassword,
+      role: 'agency',
     });
 
     const token = signToken({ id: user._id });
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
         name: user.name,
         email: user.email,
         agencyName: user.agencyName,
+        role: 'agency',
       },
       token,
     }, { status: 201 });

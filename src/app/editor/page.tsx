@@ -15,7 +15,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import dynamic from "next/dynamic";
 import FurniturePanel from "@/components/FurniturePanel";
-import { FurnitureItem, FURNITURE_ITEMS } from "@/lib/furniture";
+import { FurnitureItem, FALLBACK_FURNITURE_ITEMS, fetchFurnitureCatalog } from "@/lib/furniture";
 import SceneOverlay, { PlacedItem } from "@/components/SceneOverlay";
 import { PanoramaViewerHandle } from "@/components/PanoramaViewer";
 import { exportProjectToPdf } from "@/lib/exportPdf";
@@ -93,6 +93,8 @@ function Editor() {
   const [eventType, setEventType] = useState("Wedding");
   const [sceneIndex, setSceneIndex] = useState(0);
   const [venueId, setVenueId] = useState<string | null>(null);
+  /** Set when venue is resolved from GET /api/venues/:id (Mongo-only venues). */
+  const [resolvedVenueName, setResolvedVenueName] = useState<string | null>(null);
   const [furniturePanelOpen, setFurniturePanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -102,10 +104,25 @@ function Editor() {
   const [placedItemsMap, setPlacedItemsMap] = useState<Record<string, PlacedItem[]>>({});
   const [budget, setBudget] = useState(0);
   const [customScenes, setCustomScenes] = useState<CustomScene[]>([]);
+  const [furnitureCatalog, setFurnitureCatalog] = useState<FurnitureItem[]>(FALLBACK_FURNITURE_ITEMS);
 
 
   const sceneKey = `${eventType}::${sceneIndex}`;
   const placedItems: PlacedItem[] = placedItemsMap[sceneKey] ?? [];
+
+  useEffect(() => {
+    if (!token) {
+      setFurnitureCatalog(FALLBACK_FURNITURE_ITEMS);
+      return;
+    }
+    let cancelled = false;
+    fetchFurnitureCatalog(token).then((items) => {
+      if (!cancelled) setFurnitureCatalog(items);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   // Capture the full 360° equirectangular panorama for Vision AI.
   // PRIMARY: server-side proxy avoids CORS restriction on dl.polyhaven.org CDN.
@@ -188,7 +205,10 @@ function Editor() {
           item: {
             ...p.item,
             // Ensure price is present even for older saved items or custom items
-            price: p.item.price || FURNITURE_ITEMS.find(fi => fi.id === p.item.id)?.price || 0
+            price:
+              p.item.price ||
+              furnitureCatalog.find((fi) => fi.id === p.item.id)?.price ||
+              0,
           }
         }))
       }));
@@ -201,6 +221,7 @@ function Editor() {
         clientName: project?.client || "Valued Client",
         agencyName: user?.agencyName || "EventVista Agency",
         eventType,
+        furnitureCatalog,
         scenes: scenesData,
       });
     } catch (e) {
@@ -208,7 +229,7 @@ function Editor() {
     } finally {
       setIsExportingPdf(false);
     }
-  }, [eventType, placedItemsMap, projectName, projectId, projects, user]);
+  }, [eventType, placedItemsMap, projectName, projectId, projects, user, furnitureCatalog]);
 
 
   const handleAddFurniture = useCallback(
@@ -495,15 +516,16 @@ function Editor() {
     })),
   ];
   const currentScene = allScenes[sceneIndex] ?? allScenes[0];
-  const venue = venueId ? VENUES.find((v) => v.id === venueId) : null;
+  const legacyVenue = venueId ? VENUES.find((v) => v.id === venueId) : null;
+  const displayVenueName = resolvedVenueName ?? legacyVenue?.name ?? null;
 
   useEffect(() => {
     if (!projectId) return;
+    let cancelled = false;
 
     const restoreData = (data: any) => {
       if (data && typeof data === "object") {
         setPlacedItemsMap(data);
-        // Update uidCounter to avoid collisions
         let maxId = 0;
         Object.values(data).forEach((items: any) => {
           if (Array.isArray(items)) {
@@ -517,13 +539,20 @@ function Editor() {
       }
     };
 
-    const applyProject = (data: { name?: string; eventType?: string; venueId?: string; budget?: number; data?: any; customScenes?: Array<{ name: string; src: string; width?: number; height?: number }> }) => {
+    const applyProject = (data: {
+      name?: string;
+      eventType?: string;
+      venueId?: string;
+      budget?: number;
+      data?: any;
+      customScenes?: Array<{ name: string; src: string; width?: number; height?: number }>;
+    }) => {
       setProjectName(data.name ?? "Untitled Project");
       const et = data.eventType ?? "Wedding";
       setEventType(et);
       setVenueId(data.venueId ?? null);
-      const venue = data.venueId ? VENUES.find((v) => v.id === data.venueId) : null;
-      setSceneIndex(venue != null ? venue.sceneIndex : 0);
+      setResolvedVenueName(null);
+      setSceneIndex(0);
       setBudget(data.budget ?? 0);
       restoreData(data.data);
       if (data.customScenes?.length) {
@@ -541,6 +570,51 @@ function Editor() {
       }
     };
 
+    const loadVenueScene = async (
+      venueIdStr: string,
+      et: string,
+      projectCustomScenes: Array<{ name: string; src: string; width?: number; height?: number }> | undefined
+    ) => {
+      if (!token) return;
+      try {
+        const res = await fetch(`/api/venues/${encodeURIComponent(venueIdStr)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok || cancelled) return;
+        const venue = await res.json();
+        if (cancelled) return;
+
+        setResolvedVenueName(typeof venue.name === "string" ? venue.name : null);
+
+        const defaultScenesList = EVENT_SCENES[et] ?? EVENT_SCENES["Wedding"];
+        const baseLen = defaultScenesList.length;
+
+        if (venue.sceneImageUrl) {
+          const venueScene: CustomScene = {
+            name: venue.name,
+            src: venue.sceneImageUrl,
+            width: 4096,
+            height: 2048,
+            isCustom: true,
+          };
+          const saved = (projectCustomScenes ?? []).map((cs) => ({
+            name: cs.name,
+            src: cs.src,
+            width: cs.width ?? 0,
+            height: cs.height ?? 0,
+            isCustom: true as const,
+          }));
+          const rest = saved.filter((c) => c.src !== venue.sceneImageUrl);
+          setCustomScenes([venueScene, ...rest]);
+          setSceneIndex(baseLen);
+        } else if (venue.sceneIndex !== undefined && venue.sceneIndex !== null) {
+          setSceneIndex(Number(venue.sceneIndex));
+        }
+      } catch (err) {
+        console.warn("Could not load venue scene:", err);
+      }
+    };
+
     const local = projects.find((p) => p._id === projectId);
     if (local) {
       applyProject({
@@ -549,20 +623,39 @@ function Editor() {
         venueId: (local as any).venueId,
         budget: local.budget,
         data: (local as any).data,
+        customScenes: (local as any).customScenes,
       });
-      return;
+      const vid = (local as any).venueId as string | undefined;
+      if (vid && token) {
+        void loadVenueScene(vid, local.eventType ?? "Wedding", (local as any).customScenes);
+      }
+      return () => {
+        cancelled = true;
+      };
     }
+
     if (!token) return;
+
     fetch(`/api/projects/${projectId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data._id) {
-          applyProject(data);
+        if (!data._id || cancelled) return;
+        applyProject(data);
+        if (data.venueId && token) {
+          void loadVenueScene(
+            data.venueId,
+            data.eventType ?? "Wedding",
+            data.customScenes
+          );
         }
       })
       .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId, projects, token]);
 
   // Build chatbot context from all scenes
@@ -680,7 +773,7 @@ function Editor() {
             <h1 className="font-bold text-zinc-900 text-sm leading-tight">{projectName}</h1>
             <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider leading-none mt-0.5">
               {EVENT_LABELS[eventType] ?? eventType}
-              {venue ? ` · ${venue.name}` : ""} · {currentScene.label}
+              {displayVenueName ? ` · ${displayVenueName}` : ""} · {currentScene.label}
             </p>
           </div>
         </div>
@@ -764,10 +857,14 @@ function Editor() {
               dimensions={currentScene.dimensions}
               onApply={setPlacedItems}
               currentItems={placedItems}
+              catalog={furnitureCatalog}
             />
 
             {/* Logo Integration */}
-            <LogoIntegration onInsert={handleInsertBrandedFurniture} />
+            <LogoIntegration
+              onInsert={handleInsertBrandedFurniture}
+              catalogItems={furnitureCatalog}
+            />
 
             {/* AI Asset Advisor / Chatbot */}
             <AIChatbot
@@ -777,6 +874,7 @@ function Editor() {
                 budget,
                 scenes: aiScenes,
               }}
+              furnitureCatalog={furnitureCatalog}
             />
           </div>
         </div>
@@ -968,6 +1066,7 @@ function Editor() {
             open={furniturePanelOpen}
             onClose={() => setFurniturePanelOpen(false)}
             onAdd={handleAddFurniture}
+            catalogItems={furnitureCatalog}
           />
 
           <HintOverlay />

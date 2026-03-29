@@ -14,23 +14,27 @@ import {
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
-import { FurnitureItem, FURNITURE_ITEMS } from "@/lib/furniture";
+import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import { applyLogoToFurniture } from "@/lib/applyLogoToFurniture";
 
 interface LogoIntegrationProps {
   /** Called when the user finalises branding and wants to insert into the scene */
   onInsert: (item: FurnitureItem, brandedSrc: string) => void;
+  catalogItems?: FurnitureItem[];
 }
 
 type Step = 1 | 2 | 3 | 4;
 
-export default function LogoIntegration({ onInsert }: LogoIntegrationProps) {
+export default function LogoIntegration({
+  onInsert,
+  catalogItems = FALLBACK_FURNITURE_ITEMS,
+}: LogoIntegrationProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const { user } = useAuth();
 
   const customItems = (user?.customFurniture || []) as FurnitureItem[];
-  const allItems: FurnitureItem[] = [...FURNITURE_ITEMS, ...customItems];
+  const allItems: FurnitureItem[] = [...catalogItems, ...customItems];
 
   // Step 1 – Logo upload
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -389,7 +393,7 @@ export default function LogoIntegration({ onInsert }: LogoIntegrationProps) {
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
-                        {FURNITURE_ITEMS.map((item) => {
+                        {catalogItems.map((item) => {
                           const selected = selectedFurnitureId === item.id;
                           return (
                             <button

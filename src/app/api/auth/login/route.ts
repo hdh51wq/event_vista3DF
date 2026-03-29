@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import User from '@/models/User';
 import { comparePassword, signToken } from '@/lib/auth';
+import { seedAdmin } from '@/lib/seedAdmin';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
   try {
+    await seedAdmin();
     await connectDB();
     const { email, password } = await req.json();
 
@@ -26,12 +28,15 @@ export async function POST(req: NextRequest) {
 
     const token = signToken({ id: user._id });
 
+    const role = (user as any).role === 'admin' ? 'admin' : 'agency';
+
     return NextResponse.json({
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         agencyName: user.agencyName,
+        role,
       },
       token,
     }, { status: 200 });

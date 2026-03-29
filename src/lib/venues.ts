@@ -9,6 +9,8 @@ export interface Venue {
   sceneIndex: number;
   thumbnail: string;
   description: string;
+  /** Present when loaded from API (MongoDB). */
+  eventTypes?: ('Wedding' | 'Gala Dinner' | 'Conference')[];
 }
 
 export const VENUES: Venue[] = [
@@ -23,6 +25,7 @@ export const VENUES: Venue[] = [
     sceneIndex: 0,
     thumbnail: '/scenes/grand-hall-thumb.jpg',
     description: 'Elegant grand hall with high ceilings and classical architecture.',
+    eventTypes: ['Wedding', 'Gala Dinner'],
   },
   {
     id: 'crystal-ballroom',
@@ -35,6 +38,7 @@ export const VENUES: Venue[] = [
     sceneIndex: 1,
     thumbnail: '/scenes/crystal-ballroom-thumb.jpg',
     description: 'Modern ballroom with crystal chandeliers and panoramic windows.',
+    eventTypes: ['Wedding', 'Gala Dinner'],
   },
   {
     id: 'conference-center',
@@ -47,5 +51,6 @@ export const VENUES: Venue[] = [
     sceneIndex: 2,
     thumbnail: '/scenes/conference-center-thumb.jpg',
     description: 'Professional conference center with state-of-the-art AV equipment.',
+    eventTypes: ['Conference'],
   },
 ];

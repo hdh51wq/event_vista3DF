@@ -5,6 +5,35 @@ import { getUserIdFromRequest, hashPassword, comparePassword } from '@/lib/auth'
 
 export const runtime = 'nodejs';
 
+// GET /api/auth/me — current user (includes role)
+export async function GET(req: NextRequest) {
+  try {
+    const userId = getUserIdFromRequest(req);
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    await connectDB();
+    const user = await User.findById(userId);
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const role = user.role === 'admin' ? 'admin' : 'agency';
+
+    return NextResponse.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        agencyName: user.agencyName,
+        phone: user.phone || '',
+        address: user.address || '',
+        role,
+        customFurniture: user.customFurniture,
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
 // PATCH /api/auth/me — update profile and/or password
 export async function PATCH(req: NextRequest) {
   try {
@@ -45,6 +74,8 @@ export async function PATCH(req: NextRequest) {
 
     await user.save();
 
+    const role = user.role === 'admin' ? 'admin' : 'agency';
+
     return NextResponse.json({
       user: {
         id: user._id,
@@ -53,6 +84,7 @@ export async function PATCH(req: NextRequest) {
         agencyName: user.agencyName,
         phone: user.phone || '',
         address: user.address || '',
+        role,
       },
     });
   } catch (error: any) {

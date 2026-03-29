@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { FURNITURE_ITEMS } from "./furniture";
+import { FURNITURE_ITEMS, type FurnitureItem } from "./furniture";
 
 interface ExportPdfOptions {
   projectId: string;
@@ -8,6 +8,8 @@ interface ExportPdfOptions {
   clientName?: string;
   agencyName?: string;
   eventType: string;
+  /** Price fallback lookup when placed items lack price */
+  furnitureCatalog?: FurnitureItem[];
   scenes: { 
     label: string; 
     src: string; 
@@ -24,8 +26,10 @@ export async function exportProjectToPdf({
   clientName = "Valued Client",
   agencyName = "EventVista Agency",
   eventType,
+  furnitureCatalog,
   scenes,
 }: ExportPdfOptions) {
+  const priceCatalog = furnitureCatalog ?? FURNITURE_ITEMS;
   const doc = new jsPDF();
   const coralColor = [255, 107, 74]; // #FF6B4A
   const darkColor = [15, 15, 15];
@@ -196,7 +200,7 @@ export async function exportProjectToPdf({
       // Robust price check with fallback
       let price = p.item.price;
       if (price === undefined || price === null || price === 0) {
-        price = FURNITURE_ITEMS.find(fi => fi.id === p.item.id)?.price || 0;
+        price = priceCatalog.find(fi => fi.id === p.item.id)?.price || 0;
       }
       
       furnitureSummary[key] = { label: p.item.label, count: 0, price: price };

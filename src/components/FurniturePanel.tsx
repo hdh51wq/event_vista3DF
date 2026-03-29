@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useAuth } from "@/lib/AuthContext";
-import { FurnitureItem, FURNITURE_ITEMS } from "@/lib/furniture";
+import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import FurnitureUploadModal from "./FurnitureUploadModal";
 import { Plus, User as UserIcon, Library } from "lucide-react";
 
@@ -15,9 +15,16 @@ interface FurniturePanelProps {
   open: boolean;
   onClose: () => void;
   onAdd: (item: FurnitureItem) => void;
+  /** Mongo-backed catalogue from editor; falls back to static list */
+  catalogItems?: FurnitureItem[];
 }
 
-export default function FurniturePanel({ open, onClose, onAdd }: FurniturePanelProps) {
+export default function FurniturePanel({
+  open,
+  onClose,
+  onAdd,
+  catalogItems = FALLBACK_FURNITURE_ITEMS,
+}: FurniturePanelProps) {
   const { user } = useAuth();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const customItems = (user?.customFurniture || []) as FurnitureItem[];
@@ -99,7 +106,7 @@ export default function FurniturePanel({ open, onClose, onAdd }: FurniturePanelP
                   <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">Standard Assets</h3>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  {FURNITURE_ITEMS.map((item) => (
+                  {catalogItems.map((item) => (
                     <FurnitureCard key={item.id} item={item} onAdd={onAdd} />
                   ))}
                 </div>

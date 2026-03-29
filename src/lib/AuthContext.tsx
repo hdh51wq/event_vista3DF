@@ -28,6 +28,7 @@ export interface User {
   name: string;
   email: string;
   agencyName: string;
+  role?: "agency" | "admin";
   phone?: string;
   address?: string;
   customFurniture?: Array<{
@@ -85,6 +86,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
+  // Refresh profile (role, etc.) from server when we have a token
+  useEffect(() => {
+    if (loading || !token) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.user) {
+          const u = { ...data.user, role: data.user.role ?? "agency" };
+          setUser(u);
+          localStorage.setItem("eventvista_user", JSON.stringify(u));
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [loading, token]);
+
   const login = async (email: string, password: string) => {
     const res = await fetch("/api/auth/login", {
       method: "POST",
@@ -93,9 +115,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Login failed");
-    setUser(data.user);
+    const u = { ...data.user, role: data.user.role ?? "agency" };
+    setUser(u);
     setToken(data.token);
-    localStorage.setItem("eventvista_user", JSON.stringify(data.user));
+    localStorage.setItem("eventvista_user", JSON.stringify(u));
     localStorage.setItem("eventvista_token", data.token);
     router.push("/dashboard");
   };
@@ -108,9 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Signup failed");
-    setUser(data.user);
+    const u = { ...data.user, role: data.user.role ?? "agency" };
+    setUser(u);
     setToken(data.token);
-    localStorage.setItem("eventvista_user", JSON.stringify(data.user));
+    localStorage.setItem("eventvista_user", JSON.stringify(u));
     localStorage.setItem("eventvista_token", data.token);
     router.push("/dashboard");
   };

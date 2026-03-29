@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Send, X, ChevronDown, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 import { PlacedItem } from "@/components/SceneOverlay";
-import { FURNITURE_ITEMS } from "@/lib/furniture";
+import { FALLBACK_FURNITURE_ITEMS, type FurnitureItem } from "@/lib/furniture";
 
 interface Scene {
   label: string;
@@ -35,12 +35,12 @@ function parseDimensions(dims?: string) {
   return { w, h, area: w * h };
 }
 
-function buildScenesSummary(scenes: Scene[]) {
+function buildScenesSummary(scenes: Scene[], catalog: FurnitureItem[]) {
   return scenes.map((s) => {
     const itemMap: Record<string, { label: string; price: number; qty: number }> = {};
     s.items.forEach((p) => {
       const price =
-        p.item.price ?? FURNITURE_ITEMS.find((f) => f.id === p.item.id)?.price ?? 0;
+        p.item.price ?? catalog.find((f) => f.id === p.item.id)?.price ?? 0;
       if (itemMap[p.item.id]) {
         itemMap[p.item.id].qty += 1;
       } else {
@@ -56,10 +56,16 @@ function buildScenesSummary(scenes: Scene[]) {
   });
 }
 
-function BudgetBar({ context }: { context: ProjectContext }) {
+function BudgetBar({
+  context,
+  catalog,
+}: {
+  context: ProjectContext;
+  catalog: FurnitureItem[];
+}) {
   const currentSpend = context.scenes.reduce((total, s) => {
     const itemCost = s.items.reduce((sum, p) => {
-      const price = p.item.price ?? FURNITURE_ITEMS.find((f) => f.id === p.item.id)?.price ?? 0;
+      const price = p.item.price ?? catalog.find((f) => f.id === p.item.id)?.price ?? 0;
       return sum + price;
     }, 0);
     return total + itemCost + (s.rentPrice ?? 0);
@@ -213,9 +219,13 @@ const QUICK_PROMPTS = [
 
 interface AIChatbotProps {
   context: ProjectContext;
+  furnitureCatalog?: FurnitureItem[];
 }
 
-export default function AIChatbot({ context }: AIChatbotProps) {
+export default function AIChatbot({
+  context,
+  furnitureCatalog = FALLBACK_FURNITURE_ITEMS,
+}: AIChatbotProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -264,7 +274,7 @@ export default function AIChatbot({ context }: AIChatbotProps) {
             projectName: context.projectName,
             eventType: context.eventType,
             budget: context.budget,
-            scenes: buildScenesSummary(context.scenes),
+            scenes: buildScenesSummary(context.scenes, furnitureCatalog),
             userMessage: text.trim(),
             history: newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
           }),
@@ -303,7 +313,7 @@ export default function AIChatbot({ context }: AIChatbotProps) {
         setLoading(false);
       }
     },
-    [messages, loading, context]
+    [messages, loading, context, furnitureCatalog]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -315,7 +325,7 @@ export default function AIChatbot({ context }: AIChatbotProps) {
 
   const totalCurrentSpend = context.scenes.reduce((total, s) => {
     const itemCost = s.items.reduce((sum, p) => {
-      const price = p.item.price ?? FURNITURE_ITEMS.find((f) => f.id === p.item.id)?.price ?? 0;
+      const price = p.item.price ?? furnitureCatalog.find((f) => f.id === p.item.id)?.price ?? 0;
       return sum + price;
     }, 0);
     return total + itemCost + (s.rentPrice ?? 0);
@@ -379,7 +389,9 @@ export default function AIChatbot({ context }: AIChatbotProps) {
             }}
           >
             {/* Budget bar */}
-            {context.budget > 0 && <BudgetBar context={context} />}
+            {context.budget > 0 && (
+              <BudgetBar context={context} catalog={furnitureCatalog} />
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 pt-4 pb-2 space-y-0 scrollbar-hide">
