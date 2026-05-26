@@ -24,6 +24,7 @@ import AIAutoDesign from "@/components/AIAutoDesign";
 import LogoIntegration from "@/components/LogoIntegration";
 import SceneImportModal from "@/components/SceneImportModal";
 import { VENUES } from "@/lib/venues";
+import { copyTextToClipboard } from "@/lib/utils";
 
 const BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
 
@@ -495,12 +496,16 @@ function Editor() {
     }
   }, [eventType, sceneIndex, placedItemsMap, projectName]);
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     if (!projectId) return;
     const shareUrl = `${window.location.origin}/share/${projectId}`;
-    navigator.clipboard.writeText(shareUrl);
-    setIsSharing(true);
-    setTimeout(() => setIsSharing(false), 2000);
+    const copied = await copyTextToClipboard(shareUrl);
+    if (copied) {
+      setIsSharing(true);
+      setTimeout(() => setIsSharing(false), 2000);
+    } else {
+      window.prompt("Copy this share link:", shareUrl);
+    }
   }, [projectId]);
 
   const defaultScenes: Scene[] = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).map(
