@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongoose';
 import Venue from '@/models/Venue';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { seedVenuesIfEmpty } from '@/lib/seedVenues';
+import { ensureCloudinaryUrl } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -68,6 +69,9 @@ export async function POST(req: NextRequest) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
+    const resolvedSceneImageUrl =
+      (await ensureCloudinaryUrl(sceneImageUrl, 'venues')) ?? sceneImageUrl;
+
     const venue = await Venue.create({
       slug,
       name,
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
       pricePerDay: Number(pricePerDay),
       capacity: Number(capacity),
       eventTypes,
-      sceneImageUrl,
+      sceneImageUrl: resolvedSceneImageUrl,
       description: description ?? '',
       sceneIndex: sceneIndex != null ? Number(sceneIndex) : 0,
     });

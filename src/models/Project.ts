@@ -44,7 +44,7 @@ const ProjectSchema: Schema = new Schema(
     customScenes: [
       {
         name: { type: String, required: true },
-        src: { type: String, required: true }, // base64 string
+        src: { type: String, required: true }, // Cloudinary URL
         width: { type: Number },
         height: { type: Number },
       },

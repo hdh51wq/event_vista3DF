@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Venue from '@/models/Venue';
 import { requireAdmin } from '@/lib/requireAdmin';
+import { ensureCloudinaryUrl } from '@/lib/cloudinary';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -39,6 +40,10 @@ export async function PATCH(
     const update: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
+    }
+    if (typeof update.sceneImageUrl === 'string') {
+      update.sceneImageUrl =
+        (await ensureCloudinaryUrl(update.sceneImageUrl, 'venues')) ?? update.sceneImageUrl;
     }
 
     const venue = await Venue.findByIdAndUpdate(id, update, { new: true, runValidators: true });

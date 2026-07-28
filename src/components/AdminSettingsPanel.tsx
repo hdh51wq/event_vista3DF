@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uploadImage } from "@/lib/uploadImageClient";
 
 export type AdminSettingsTab = "overview" | "users" | "scenes" | "furniture";
 
@@ -66,15 +67,6 @@ type AdminFurnitureRow = {
 };
 
 const EVENT_TYPE_OPTIONS = ["Wedding", "Gala Dinner", "Conference"] as const;
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error("read failed"));
-    r.readAsDataURL(file);
-  });
-}
 
 /** Approximate byte size of a data URL payload (after compression, for display / limits). */
 function dataUrlDecodedBytes(dataUrl: string): number {
@@ -192,6 +184,7 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
   const [sceneImageCompressionInfo, setSceneImageCompressionInfo] = useState("");
   const [sceneImageSizeWarning, setSceneImageSizeWarning] = useState("");
   const [sceneImageCompressing, setSceneImageCompressing] = useState(false);
+  const [sceneImageUploading, setSceneImageUploading] = useState(false);
 
   const [furnitureModal, setFurnitureModal] = useState<"add" | "edit" | null>(null);
   const [editingFurniture, setEditingFurniture] = useState<AdminFurnitureRow | null>(null);
@@ -208,6 +201,7 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
   });
   const [furnitureSaving, setFurnitureSaving] = useState(false);
   const [furnitureImageError, setFurnitureImageError] = useState("");
+  const [furnitureImageUploading, setFurnitureImageUploading] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -521,8 +515,15 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
       return;
     }
     setFurnitureImageError("");
-    const url = await readFileAsDataUrl(file);
-    setFurnitureForm((prev) => ({ ...prev, [key]: url }));
+    setFurnitureImageUploading(key);
+    try {
+      const url = await uploadImage(file, "furniture", token);
+      setFurnitureForm((prev) => ({ ...prev, [key]: url }));
+    } catch (e: unknown) {
+      setFurnitureImageError(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setFurnitureImageUploading(null);
+    }
   };
 
   const onSceneImage = async (file: File | null) => {
@@ -535,6 +536,7 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
       return;
     }
     setSceneImageCompressing(true);
+    setSceneImageUploading(false);
     setSceneImageCompressionInfo("");
     setSceneImageSizeWarning("");
     try {
@@ -559,13 +561,19 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
       } else {
         setSceneImageError("");
       }
-      setSceneForm((prev) => ({ ...prev, sceneImageUrl: dataUrl }));
-    } catch {
-      setSceneImageError("Could not process image. Try another file.");
+      setSceneImageUploading(true);
+      const cloudinaryUrl = await uploadImage(dataUrl, "venues", token);
+      setSceneForm((prev) => ({ ...prev, sceneImageUrl: cloudinaryUrl }));
+      setSceneImageCompressionInfo(
+        `Uploaded to cloud: ${formatMb(originalBytes)} → ${formatMb(compressedBytes)} ✓`
+      );
+    } catch (e: unknown) {
+      setSceneImageError(e instanceof Error ? e.message : "Could not process image. Try another file.");
       setSceneImageCompressionInfo("");
       setSceneImageSizeWarning("");
     } finally {
       setSceneImageCompressing(false);
+      setSceneImageUploading(false);
     }
   };
 
@@ -1123,22 +1131,23 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
                 <input
                   type="file"
                   accept="image/jpeg,image/png"
-                  disabled={sceneImageCompressing}
+                  disabled={sceneImageCompressing || sceneImageUploading}
                   onChange={(e) => onSceneImage(e.target.files?.[0] ?? null)}
                   className="w-full text-xs disabled:opacity-50"
                 />
-                {sceneImageCompressing && (
+                {(sceneImageCompressing || sceneImageUploading) && (
                   <p className="text-xs text-zinc-500 flex items-center gap-1.5">
                     <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
-                    Compressing image…
+                    {sceneImageUploading ? "Uploading to cloud…" : "Compressing image…"}
                   </p>
                 )}
-                {!sceneImageCompressing && sceneImageCompressionInfo && (
+                {!sceneImageCompressing && !sceneImageUploading && sceneImageCompressionInfo && (
                   <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
                     {sceneImageCompressionInfo}
                   </p>
                 )}
                 {!sceneImageCompressing &&
+                  !sceneImageUploading &&
                   sceneForm.sceneImageUrl &&
                   !sceneImageCompressionInfo && (
                     <p className="text-xs text-zinc-500">Current scene image (upload to replace)</p>
@@ -1175,6 +1184,7 @@ export default function AdminSettingsPanel({ token, tab, onNavigate }: Props) {
                 disabled={Boolean(
                   sceneSaving ||
                     sceneImageCompressing ||
+                    sceneImageUploading ||
                     sceneImageSizeWarning ||
                     (!!sceneForm.sceneImageUrl &&
                       isDataUrl(sceneForm.sceneImageUrl) &&

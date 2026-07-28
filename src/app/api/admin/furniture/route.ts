@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongoose';
 import Furniture from '@/models/Furniture';
 import { requireAdmin } from '@/lib/requireAdmin';
 import { seedFurnitureIfEmpty } from '@/lib/seedFurniture';
+import { migrateFurnitureViews } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -38,18 +39,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Furniture id already exists' }, { status: 400 });
     }
 
+    const migratedViews = await migrateFurnitureViews({
+      front: views.front,
+      back: views.back,
+      left: views.left,
+      right: views.right,
+    });
+
     const item = await Furniture.create({
       id: String(id),
       label: String(label),
       price: price != null ? Number(price) : 0,
       defaultWidth: Number(defaultWidth),
       defaultHeight: Number(defaultHeight),
-      views: {
-        front: views.front,
-        back: views.back,
-        left: views.left,
-        right: views.right,
-      },
+      views: migratedViews,
     });
 
     return NextResponse.json(item, { status: 201 });

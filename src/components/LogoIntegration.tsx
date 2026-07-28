@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import { applyLogoToFurniture } from "@/lib/applyLogoToFurniture";
+import { uploadImage } from "@/lib/uploadImageClient";
 
 interface LogoIntegrationProps {
   /** Called when the user finalises branding and wants to insert into the scene */
@@ -31,7 +32,7 @@ export default function LogoIntegration({
 }: LogoIntegrationProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(1);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   const customItems = (user?.customFurniture || []) as FurnitureItem[];
   const allItems: FurnitureItem[] = [...catalogItems, ...customItems];
@@ -60,6 +61,8 @@ export default function LogoIntegration({
     offsetX: number;
     offsetY: number;
   } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadErrorOnInsert, setUploadErrorOnInsert] = useState("");
   const renderVersionRef = useRef(0);
 
   const selectedFurniture = selectedFurnitureId
@@ -79,6 +82,8 @@ export default function LogoIntegration({
     setPreviewSrc(null);
     setRenderError("");
     setImageDims(null);
+    setUploadErrorOnInsert("");
+    setIsUploading(false);
   }, []);
 
   // ── Step 1: Handle logo upload ───────────────────────────────────────────────
@@ -236,7 +241,7 @@ export default function LogoIntegration({
   };
 
   const handleApplyAndInsert = useCallback(async () => {
-    if (!selectedFurniture || !logoDataUrl || !imageDims) return;
+    if (!selectedFurniture || !logoDataUrl || !imageDims || !token) return;
     const furnitureSrc = selectedFurniture.views.front;
     const { w, h } = imageDims;
     const clampedSize = Math.min(Math.max(sizePercent, 0.1), 0.4);
@@ -248,17 +253,36 @@ export default function LogoIntegration({
     const x = maxX * logoXNorm;
     const y = maxY * logoYNorm;
 
-    const final = await applyLogoToFurniture(furnitureSrc, logoDataUrl, {
-      x,
-      y,
-      sizePercent: clampedSize,
-      opacity: Math.min(Math.max(opacity, 0.5), 1),
-    });
-
-    onInsert(selectedFurniture, final);
-    setOpen(false);
-    reset();
-  }, [selectedFurniture, logoDataUrl, imageDims, sizePercent, opacity, logoXNorm, logoYNorm, onInsert, reset]);
+    setIsUploading(true);
+    setUploadErrorOnInsert("");
+    try {
+      const final = await applyLogoToFurniture(furnitureSrc, logoDataUrl, {
+        x,
+        y,
+        sizePercent: clampedSize,
+        opacity: Math.min(Math.max(opacity, 0.5), 1),
+      });
+      const cloudinaryUrl = await uploadImage(final, "branded", token);
+      onInsert(selectedFurniture, cloudinaryUrl);
+      setOpen(false);
+      reset();
+    } catch {
+      setUploadErrorOnInsert("Failed to upload branded image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  }, [
+    selectedFurniture,
+    logoDataUrl,
+    imageDims,
+    sizePercent,
+    opacity,
+    logoXNorm,
+    logoYNorm,
+    onInsert,
+    reset,
+    token,
+  ]);
 
   const currentStepLabel =
     step === 1 ? "Upload Logo" : step === 2 ? "Select Furniture" : step === 3 ? "Adjust & Preview" : "Done";
@@ -592,6 +616,9 @@ export default function LogoIntegration({
                       </div>
                     </div>
                     {renderError && <p className="text-[10px] text-red-400">{renderError}</p>}
+                    {uploadErrorOnInsert && (
+                      <p className="text-[10px] text-red-400">{uploadErrorOnInsert}</p>
+                    )}
 
                     <div className="flex gap-2 pt-1">
                       <button
@@ -605,7 +632,7 @@ export default function LogoIntegration({
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.97 }}
                         onClick={handleApplyAndInsert}
-                        disabled={isRendering}
+                        disabled={isRendering || isUploading}
                         className="flex-1 py-2 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
                           background: "linear-gradient(135deg, #0f766e, #34d399)",
@@ -613,7 +640,7 @@ export default function LogoIntegration({
                         }}
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        Apply &amp; Insert into Scene
+                        {isUploading ? "Uploading…" : "Apply & Insert into Scene"}
                       </motion.button>
                     </div>
                   </div>

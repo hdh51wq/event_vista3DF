@@ -61,6 +61,7 @@ interface AuthContextType {
   createProject: (data: Partial<Project>) => Promise<void>;
   updateProject: (id: string, data: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  removeCustomFurniture: (itemId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -232,6 +233,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProjects(prev => prev.filter(p => p._id !== id));
   };
 
+  const removeCustomFurniture = async (itemId: string): Promise<boolean> => {
+    if (!token) return false;
+    const res = await fetch(`/api/furniture/user/${encodeURIComponent(itemId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated = {
+          ...prev,
+          customFurniture: (prev.customFurniture || []).filter((f) => f.id !== itemId),
+        };
+        localStorage.setItem("eventvista_user", JSON.stringify(updated));
+        return updated;
+      });
+      return true;
+    }
+    return false;
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -249,6 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       createProject,
       updateProject,
       deleteProject,
+      removeCustomFurniture,
     }}>
       {children}
     </AuthContext.Provider>

@@ -95,7 +95,7 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
 }
 
 export default function SettingsPage() {
-  const { user, token, saveProfile, deleteAccount, logout, isLoggedIn, loading } = useAuth();
+  const { user, token, saveProfile, deleteAccount, logout, isLoggedIn, loading, removeCustomFurniture } = useAuth();
   const router = useRouter();
   const isAdmin = user?.role === "admin";
   const [section, setSection] = useState<SettingsSection>("profile");
@@ -238,6 +238,27 @@ export default function SettingsPage() {
     } catch (err: any) {
       showToast(err.message || "Failed to delete account", "error");
       setDeleting(false);
+    }
+  };
+
+  const handleRemoveCustomFurniture = async (itemId: string) => {
+    if (
+      !confirm(
+        "Remove this custom furniture? It will be deleted from your library permanently."
+      )
+    ) {
+      return;
+    }
+    try {
+      const ok = await removeCustomFurniture(itemId);
+      if (ok) {
+        showToast("Custom furniture removed", "success");
+      } else {
+        showToast("Failed to remove furniture. Please try again.", "error");
+      }
+    } catch (err) {
+      console.error("Remove furniture error:", err);
+      showToast("Failed to remove furniture. Please try again.", "error");
     }
   };
 
@@ -408,6 +429,45 @@ export default function SettingsPage() {
                   )}
                   {profileSaving ? "Saving…" : "Save Profile"}
                 </button>
+              </div>
+
+              <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 space-y-4">
+                <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                  <Armchair className="w-4 h-4 text-coral-500" />
+                  My Custom Furniture
+                </h3>
+                {(user?.customFurniture?.length ?? 0) > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {user!.customFurniture!.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative flex flex-col items-center gap-2 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 group"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomFurniture(item.id)}
+                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+                          title="Remove this furniture"
+                        >
+                          ✕
+                        </button>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.views.front}
+                          alt={item.label}
+                          className="w-14 h-14 object-contain"
+                        />
+                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 text-center truncate w-full">
+                          {item.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    No custom furniture yet. Upload items from the editor furniture panel.
+                  </p>
+                )}
               </div>
             </motion.div>
                 )}

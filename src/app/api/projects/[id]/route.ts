@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Project from '@/models/Project';
 import { getUserIdFromRequest } from '@/lib/auth';
+import { migrateCustomScenes, migratePlacedItemsData } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -40,7 +41,12 @@ export async function PATCH(
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
     }
-    if (body.customScenes !== undefined) update.customScenes = body.customScenes;
+    if (body.customScenes !== undefined) {
+      update.customScenes = await migrateCustomScenes(body.customScenes);
+    }
+    if (body.data !== undefined) {
+      update.data = await migratePlacedItemsData(body.data);
+    }
 
     const project = await Project.findOneAndUpdate(
       { _id: id, userId },

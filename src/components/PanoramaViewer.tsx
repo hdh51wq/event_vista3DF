@@ -7,6 +7,8 @@ export interface PanoramaViewerHandle {
   getView: () => MarzipanoView | null;
   /** The container element — needed for bounds */
   getContainer: () => HTMLDivElement | null;
+  /** The live Marzipano Viewer instance */
+  getViewer: () => unknown | null;
 }
 
 /** Minimal typings for the parts of Marzipano we actually use */
@@ -39,6 +41,7 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, PanoramaViewerProps>(
     useImperativeHandle(ref, () => ({
       getView: () => viewRef.current,
       getContainer: () => containerRef.current,
+      getViewer: () => viewerRef.current,
     }));
 
     useEffect(() => {

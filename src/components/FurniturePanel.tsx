@@ -8,6 +8,12 @@ import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import FurnitureUploadModal from "./FurnitureUploadModal";
 import { Plus, User as UserIcon, Library } from "lucide-react";
 
+export const FURNITURE_3D_MAP: Record<string, string> = {
+  sofa: "/furniture/sofa.glb",
+  chair: "/furniture/chair.glb",
+  table: "/furniture/table.glb",
+};
+
 export type { FurnitureItem };
 
 
@@ -25,7 +31,7 @@ export default function FurniturePanel({
   onAdd,
   catalogItems = FALLBACK_FURNITURE_ITEMS,
 }: FurniturePanelProps) {
-  const { user } = useAuth();
+  const { user, removeCustomFurniture } = useAuth();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const customItems = (user?.customFurniture || []) as FurnitureItem[];
 
@@ -81,7 +87,13 @@ export default function FurniturePanel({
                 {customItems.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3">
                     {customItems.map((item) => (
-                      <FurnitureCard key={item.id} item={item} onAdd={onAdd} />
+                      <FurnitureCard
+                        key={item.id}
+                        item={item}
+                        onAdd={onAdd}
+                        showRemove
+                        onRemove={removeCustomFurniture}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -127,11 +139,61 @@ export default function FurniturePanel({
   );
 }
 
-function FurnitureCard({ item, onAdd }: { item: FurnitureItem; onAdd: (item: FurnitureItem) => void }) {
+function FurnitureCard({
+  item,
+  onAdd,
+  showRemove = false,
+  onRemove,
+}: {
+  item: FurnitureItem;
+  onAdd: (item: FurnitureItem) => void;
+  showRemove?: boolean;
+  onRemove?: (itemId: string) => Promise<boolean>;
+}) {
+  const glbPath = FURNITURE_3D_MAP[item.id];
+
+  const handleClick = () => {
+    if (glbPath) {
+      window.dispatchEvent(
+        new CustomEvent("add3DFurniture", {
+          detail: { label: item.label, glbPath },
+        })
+      );
+      return;
+    }
+    onAdd(item);
+  };
+
+  const handleRemove = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (
+      !onRemove ||
+      !confirm(
+        "Remove this custom furniture? It will be deleted from your library permanently."
+      )
+    ) {
+      return;
+    }
+    const ok = await onRemove(item.id);
+    if (!ok) alert("Failed to remove furniture. Please try again.");
+  };
+
   return (
-    <button
-      onClick={() => onAdd(item)}
-      className="group flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 cursor-pointer text-left relative overflow-hidden"
+    <div className="relative group">
+      {showRemove && onRemove && (
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="absolute top-2 right-2 z-20 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
+          title="Remove this furniture"
+        >
+          ✕
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={handleClick}
+        className="w-full group flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-300 cursor-pointer text-left relative overflow-hidden"
       style={{
         background: "rgba(255,255,255,0.05)",
         border: "1px solid rgba(255,255,255,0.08)",
@@ -147,6 +209,11 @@ function FurnitureCard({ item, onAdd }: { item: FurnitureItem; onAdd: (item: Fur
         (e.currentTarget as HTMLElement).style.boxShadow = "none";
       }}
     >
+      {glbPath && (
+        <span className="absolute top-2 left-2 z-20 px-1.5 py-0.5 rounded-md bg-blue-500/90 text-white text-[9px] font-bold uppercase tracking-wide">
+          3D
+        </span>
+      )}
       <div className="w-16 h-16 flex items-center justify-center relative z-10">
         <Image
           src={item.views.front}
@@ -165,9 +232,10 @@ function FurnitureCard({ item, onAdd }: { item: FurnitureItem; onAdd: (item: Fur
           ${item.price?.toLocaleString() || "0"}
         </span>
       </div>
-      
+
       {/* Decorative background pulse */}
       <div className="absolute inset-0 bg-gradient-to-br from-coral-500/0 via-coral-500/0 to-coral-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-    </button>
+      </button>
+    </div>
   );
 }

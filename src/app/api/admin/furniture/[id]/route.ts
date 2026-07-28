@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Furniture from '@/models/Furniture';
 import { requireAdmin } from '@/lib/requireAdmin';
+import { migrateFurnitureViews } from '@/lib/cloudinary';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +21,9 @@ export async function PATCH(
     const update: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
+    }
+    if (update.views && typeof update.views === 'object') {
+      update.views = await migrateFurnitureViews(update.views as Record<string, string | undefined>);
     }
 
     const item = await Furniture.findOneAndUpdate({ id: decodeURIComponent(id) }, update, {

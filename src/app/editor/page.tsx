@@ -79,6 +79,10 @@ const PanoramaViewer = dynamic(() => import("@/components/PanoramaViewer"), {
   ),
 });
 
+const ThreeOverlay = dynamic(() => import("@/components/ThreeOverlay"), {
+  ssr: false,
+});
+
 let uidCounter = 0;
 function nextUid() { return `item-${++uidCounter}`; }
 
@@ -89,6 +93,7 @@ function Editor() {
   const { projects, token, user } = useAuth();
 
   const panoramaRef = useRef<PanoramaViewerHandle | null>(null);
+  const [marzipanoViewer, setMarzipanoViewer] = useState<unknown>(null);
 
   const [projectName, setProjectName] = useState("Untitled Project");
   const [eventType, setEventType] = useState("Wedding");
@@ -260,6 +265,7 @@ function Editor() {
         height: item.defaultHeight,
         facing: "front",
         brandedSrc: undefined,
+        rotationY: 0,
       };
       setPlacedItems([...placedItems, newItem]);
     },
@@ -294,6 +300,7 @@ function Editor() {
         height: item.defaultHeight,
         facing: "front",
         brandedSrc,
+        rotationY: 0,
       };
 
       setPlacedItems([...placedItems, newItem]);
@@ -523,6 +530,18 @@ function Editor() {
   const currentScene = allScenes[sceneIndex] ?? allScenes[0];
   const legacyVenue = venueId ? VENUES.find((v) => v.id === venueId) : null;
   const displayVenueName = resolvedVenueName ?? legacyVenue?.name ?? null;
+
+  useEffect(() => {
+    setMarzipanoViewer(null);
+    const interval = window.setInterval(() => {
+      const viewer = panoramaRef.current?.getViewer();
+      if (viewer) {
+        setMarzipanoViewer(viewer);
+        window.clearInterval(interval);
+      }
+    }, 50);
+    return () => window.clearInterval(interval);
+  }, [currentScene.src]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -886,13 +905,15 @@ function Editor() {
 
         {/* ── RIGHT: 360° Viewer ────────────────────────────────────────── */}
         <div className="flex-1 relative overflow-hidden bg-zinc-900">
-          <PanoramaViewer ref={panoramaRef} src={currentScene.src} />
-
-          <SceneOverlay
-            placedItems={placedItems}
-            onChange={setPlacedItems}
-            viewerRef={panoramaRef}
-          />
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <PanoramaViewer ref={panoramaRef} src={currentScene.src} />
+            <ThreeOverlay viewer={marzipanoViewer ?? panoramaRef.current?.getViewer()} />
+            <SceneOverlay
+              placedItems={placedItems}
+              onChange={setPlacedItems}
+              viewerRef={panoramaRef}
+            />
+          </div>
 
           {/* 360° badge */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none">

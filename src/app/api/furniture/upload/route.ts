@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/lib/mongoose";
 import User from "@/models/User";
 import { getUserIdFromRequest } from "@/lib/auth";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  console.log("=== FURNITURE UPLOAD ===");
+
   try {
     await connectDB();
     const userId = getUserIdFromRequest(req);
@@ -23,16 +26,14 @@ export async function POST(req: NextRequest) {
     const label = formData.get("label") as string;
     const priceStr = formData.get("price") as string;
     const price = parseFloat(priceStr) || 0;
-    
-    // Check if label exists
+
     if (!label) {
       return NextResponse.json({ error: "Item label is required" }, { status: 400 });
     }
 
     const views: Record<string, string> = {};
     const viewKeys = ["front", "back", "left", "right"];
-    
-    // Ensure Front image is provided
+
     const frontFile = formData.get("front") as File | null;
     if (!frontFile || frontFile.size === 0) {
       return NextResponse.json({ error: "Front image is required" }, { status: 400 });
@@ -42,22 +43,29 @@ export async function POST(req: NextRequest) {
       const file = formData.get(key) as File | null;
       if (!file || file.size === 0) continue;
 
-      // Validation
       const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/svg+xml"];
       if (!validTypes.includes(file.type)) {
-        return NextResponse.json({ error: `Invalid file type for ${key} image. Only PNG, JPG, and SVG are allowed.` }, { status: 400 });
+        return NextResponse.json(
+          { error: `Invalid file type for ${key} image. Only PNG, JPG, and SVG are allowed.` },
+          { status: 400 }
+        );
       }
 
-      // Max 1MB for Base64 storage in MongoDB to avoid BSON document size limits
-      if (file.size > 1 * 1024 * 1024) {
-        return NextResponse.json({ error: `File size too large for ${key} image. Max 1MB when using cloud storage.` }, { status: 400 });
+      if (file.size > 5 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: `File size too large for ${key} image. Max 5MB.` },
+          { status: 400 }
+        );
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      const base64String = buffer.toString("base64");
-      const dataUri = `data:${file.type};base64,${base64String}`;
-      
-      views[key] = dataUri;
+      const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
+
+      console.log("Uploading to Cloudinary...");
+      const cloudinaryUrl = await uploadToCloudinary(base64, "furniture");
+      console.log("Result URL:", cloudinaryUrl);
+
+      views[key] = cloudinaryUrl;
     }
 
     const newFurniture = {
@@ -73,8 +81,8 @@ export async function POST(req: NextRequest) {
     user.customFurniture.push(newFurniture);
     await user.save();
 
-    return NextResponse.json({ 
-      message: "Furniture uploaded successfully", 
+    return NextResponse.json({
+      message: "Furniture uploaded successfully",
       item: newFurniture,
       user: {
         id: user._id,
@@ -83,11 +91,12 @@ export async function POST(req: NextRequest) {
         agencyName: user.agencyName,
         phone: user.phone,
         address: user.address,
-        customFurniture: user.customFurniture
-      }
+        customFurniture: user.customFurniture,
+      },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -3,6 +3,8 @@
 import { useState, useCallback, useEffect, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, UploadCloud, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useAuth } from "@/lib/AuthContext";
+import { uploadImage } from "@/lib/uploadImageClient";
 
 export interface SceneImportModalProps {
   isOpen: boolean;
@@ -94,6 +96,7 @@ function formatBytes(bytes: number): string {
 
 export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImportModalProps) {
   const inputId = useId();
+  const { token } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -170,15 +173,20 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
 
   const handleImport = () => {
     if (!file || !dims) return;
+    if (!token) {
+      setError("You must be signed in to import a scene.");
+      return;
+    }
     setImporting(true);
+    setError(null);
     compressScene(file)
+      .then((dataUrl) => uploadImage(dataUrl, "custom-scenes", token))
       .then((src) => {
         onImport({ name: sceneName || "Imported Scene", src, width: dims.width, height: dims.height });
-        setImporting(false);
         reset();
       })
       .catch(() => {
-        setError("Failed to compress image.");
+        setError("Failed to upload scene image. Please try again.");
         setImporting(false);
       });
   };

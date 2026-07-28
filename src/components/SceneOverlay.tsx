@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
-import { Check, RotateCw, RotateCcw, FlipHorizontal, RefreshCw } from "lucide-react";
+import { Check, FlipHorizontal } from "lucide-react";
 import { FurnitureItem } from "@/lib/furniture";
 import { PanoramaViewerHandle } from "./PanoramaViewer";
 
@@ -19,9 +19,15 @@ export interface PlacedItem {
   facing: Facing;
   flipX?: boolean;
   locked?: boolean;
-  /** Canvas-composited image with client logo burned in (data URL) */
+  /** Cloudinary URL for canvas-composited image with client logo */
   brandedSrc?: string;
+  /** 0–360° product spin; defaults to 0 */
+  rotationAngle?: number;
+  /** 0–360° CSS 3D rotation; defaults to 0 */
+  rotationY?: number;
 }
+
+type InteractionMode = "drag" | "resize" | "rotate3d" | null;
 
 /** Screen-space position computed each frame */
 interface ScreenPos {
@@ -40,6 +46,26 @@ interface SceneOverlayProps {
   onChange?: (items: PlacedItem[]) => void;
   viewerRef: React.RefObject<PanoramaViewerHandle | null>;
   readOnly?: boolean;
+}
+
+function getSpinTransform(
+  rotationAngle: number,
+  views: FurnitureItem["views"]
+): {
+  src: string;
+  rotateY: number;
+  scaleX: number;
+  face: Facing;
+} {
+  const angle = ((rotationAngle % 360) + 360) % 360;
+  const zone = Math.floor(angle / 90);
+  const remainder = angle % 90;
+  const faces: Facing[] = ["front", "right", "back", "left"];
+  const face = faces[zone];
+  const src = views[face] ?? views.front;
+  const rotateY = remainder;
+  const scaleX = Math.cos((rotateY * Math.PI) / 180);
+  return { src, rotateY, scaleX, face };
 }
 
 export default function SceneOverlay({
@@ -118,7 +144,17 @@ export default function SceneOverlay({
     startHeight: number;
   } | null>(null);
 
+  const spinRef = useRef<{
+    uid: string;
+    startMouseX: number;
+    startAngle: number;
+  } | null>(null);
+
   const [isDragging, setIsDragging] = useState(false);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [rotatingUid, setRotatingUid] = useState<string | null>(null);
+  const [rotateStartX, setRotateStartX] = useState(0);
+  const [rotateStartAngle, setRotateStartAngle] = useState(0);
 
   const updateItem = useCallback(
     (uid: string, patch: Partial<PlacedItem>) => {
@@ -152,8 +188,23 @@ export default function SceneOverlay({
     [viewerRef]
   );
 
+  const applySpinMove = useCallback(
+    (clientX: number) => {
+      if (!spinRef.current) return;
+      const dx = clientX - spinRef.current.startMouseX;
+      let newAngle = (spinRef.current.startAngle + dx) % 360;
+      if (newAngle < 0) newAngle += 360;
+      updateItem(spinRef.current.uid, { rotationAngle: newAngle });
+    },
+    [updateItem]
+  );
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      if (spinRef.current) {
+        applySpinMove(e.clientX);
+        return;
+      }
       if (dragRef.current) {
         const dx = e.clientX - dragRef.current.startMouseX;
         const dy = e.clientY - dragRef.current.startMouseY;
@@ -173,13 +224,26 @@ export default function SceneOverlay({
         });
       }
     },
-    [updateItem, screenDeltaToWorld]
+    [updateItem, screenDeltaToWorld, applySpinMove]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!spinRef.current) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      e.preventDefault();
+      applySpinMove(touch.clientX);
+    },
+    [applySpinMove]
   );
 
   const handleMouseUp = useCallback(() => {
     dragRef.current = null;
     resizeRef.current = null;
+    spinRef.current = null;
     setIsDragging(false);
+    setIsSpinning(false);
   }, []);
 
   const startDrag = (e: React.MouseEvent, placed: PlacedItem) => {
@@ -211,24 +275,63 @@ export default function SceneOverlay({
     };
   };
 
-
-  const cycleFacing = (current: Facing, steps: number): Facing => {
-    const list: Facing[] = ["front", "right", "back", "left"];
-    const idx = list.indexOf(current);
-    return list[(idx + steps + 4) % 4];
+  const startSpin = (clientX: number, placed: PlacedItem) => {
+    if (readOnly || placed.locked) return;
+    setIsDragging(true);
+    setIsSpinning(true);
+    spinRef.current = {
+      uid: placed.uid,
+      startMouseX: clientX,
+      startAngle: placed.rotationAngle ?? 0,
+    };
   };
+
+  useEffect(() => {
+    if (!rotatingUid) return;
+
+    const handleMove = (e: PointerEvent) => {
+      const deltaX = e.clientX - rotateStartX;
+      const newAngle = (rotateStartAngle + deltaX * 0.5) % 360;
+      const normalized = newAngle < 0 ? newAngle + 360 : newAngle;
+      updateItem(rotatingUid, { rotationY: normalized });
+    };
+
+    const handleUp = () => setRotatingUid(null);
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+  }, [rotatingUid, rotateStartX, rotateStartAngle, updateItem]);
+
+  useEffect(() => {
+    if (!rotatingUid) return;
+    document.body.style.cursor = "ew-resize";
+    return () => {
+      document.body.style.cursor = "";
+    };
+  }, [rotatingUid]);
 
   return (
     <div
       ref={overlayRef}
       className="absolute inset-0 z-20"
       style={{
-        pointerEvents: isDragging ? "all" : "none",
-        cursor: isDragging ? "grabbing" : "default",
+        pointerEvents: isDragging || rotatingUid ? "all" : "none",
+        cursor: isDragging
+          ? spinRef.current || rotatingUid
+            ? "ew-resize"
+            : "grabbing"
+          : "default",
       }}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleMouseUp}
+      onTouchCancel={handleMouseUp}
     >
       {placedItems.map((placed) => {
         const pos = screenPositions[placed.uid];
@@ -238,11 +341,31 @@ export default function SceneOverlay({
           const rotY = pos.rotateY ?? 0;
           const rotX = pos.rotateX ?? 0;
           const scaleVal = pos.scale ?? 1;
+          const rotationAngle = placed.rotationAngle ?? 0;
+          const useSpin =
+            placed.rotationAngle !== undefined && placed.rotationAngle !== 0;
+          const spin = getSpinTransform(rotationAngle, placed.item.views);
+          const imageSrc = useSpin
+            ? spin.src
+            : placed.brandedSrc ??
+              placed.item.views[placed.facing] ??
+              placed.item.views.front;
+          const displayFace = spin.face;
           // Build the CSS transform: sphere-curvature rotation + optional flipX
           const curvatureTransform = `perspective(600px) rotateY(${rotY}deg) rotateX(${rotX}deg) scale(${scaleVal})`;
           const combinedTransform = placed.flipX
             ? `perspective(600px) rotateY(${rotY}deg) rotateX(${rotX}deg) scale(${scaleVal}) scaleX(-1)`
             : curvatureTransform;
+          const innerSpinTransform = useSpin
+            ? `scaleX(${spin.scaleX}) rotateY(${spin.rotateY}deg)`
+            : undefined;
+          const itemRotY = placed.rotationY ?? 0;
+          const itemRotRad = (itemRotY * Math.PI) / 180;
+          const absScale = Math.abs(Math.cos(itemRotRad));
+          const brightness = 0.72 + absScale * 0.25;
+          const shadowSize = Math.round(placed.height * 0.08);
+          const shadowBlur = Math.round(placed.height * 0.12);
+          const isRotating = rotatingUid === placed.uid;
 
         return (
           <div
@@ -303,15 +426,88 @@ export default function SceneOverlay({
               </div>
             )}
 
-            <Image
-              src={placed.brandedSrc ?? placed.item.views[placed.facing] ?? placed.item.views.front}
-              alt={placed.item.label}
-              width={placed.width}
-              height={placed.height}
-              style={{ width: "100%", height: "100%", objectFit: "contain", pointerEvents: "none" }}
-              unoptimized
-              draggable={false}
-            />
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                transform: innerSpinTransform,
+                transition: useSpin ? "transform 0.05s linear" : undefined,
+                transformOrigin: "center center",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: -8,
+                  left: "50%",
+                  transform: `translateX(-50%) scaleX(${0.4 + absScale * 0.6})`,
+                  width: placed.width * 0.75,
+                  height: 14,
+                  background:
+                    "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, transparent 100%)",
+                  borderRadius: "50%",
+                  pointerEvents: "none",
+                  opacity: 0.35 + absScale * 0.45,
+                  transition: isRotating ? "none" : "all 0.1s ease",
+                }}
+              />
+              <Image
+                src={imageSrc}
+                alt={placed.item.label}
+                width={placed.width}
+                height={placed.height}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  pointerEvents: "none",
+                  transform: `perspective(600px) rotateY(${itemRotY}deg)`,
+                  filter: `
+                    drop-shadow(0px ${shadowSize}px ${shadowBlur}px rgba(0,0,0,0.55))
+                    brightness(${brightness})
+                    contrast(1.05)
+                    saturate(0.95)
+                  `,
+                  transition: isRotating ? "none" : "transform 0.1s ease",
+                }}
+                unoptimized
+                draggable={false}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: "22%",
+                  background: "linear-gradient(to top, rgba(0,0,0,0.20), transparent)",
+                  pointerEvents: "none",
+                  borderRadius: "0 0 4px 4px",
+                }}
+              />
+            </div>
+
+            {isRotating && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: -28,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "rgba(0,0,0,0.75)",
+                  color: "white",
+                  fontSize: 11,
+                  padding: "2px 8px",
+                  borderRadius: 20,
+                  whiteSpace: "nowrap",
+                  pointerEvents: "none",
+                  zIndex: 15,
+                }}
+              >
+                {Math.round(itemRotY)}°
+              </div>
+            )}
 
             {(isSelected || readOnly) && (
               <>
@@ -376,7 +572,7 @@ export default function SceneOverlay({
                 )}
 
                       {/* Resize handle */}
-                      {!isLocked && (
+                      {!isLocked && !readOnly && (
                         <>
                           <div
                             onMouseDown={(e) => startResize(e, placed)}
@@ -392,8 +588,33 @@ export default function SceneOverlay({
                         </>
                       )}
 
-                      {/* Rotation Controls Toolbar */}
-                      {!isLocked && (
+                      {/* 3D rotate handle */}
+                      {isSelected && !isLocked && !readOnly && (
+                        <button
+                          title="Rotate 3D"
+                          onPointerDown={(e) => {
+                            e.stopPropagation();
+                            setRotatingUid(placed.uid);
+                            setRotateStartX(e.clientX);
+                            setRotateStartAngle(placed.rotationY ?? 0);
+                          }}
+                          className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs flex items-center justify-center transition-colors cursor-ew-resize"
+                          style={{
+                            position: "absolute",
+                            bottom: -14,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            zIndex: 20,
+                            touchAction: "none",
+                            border: "none",
+                          }}
+                        >
+                          ↻
+                        </button>
+                      )}
+
+                      {/* Toolbar: flip + face label */}
+                      {!isLocked && !readOnly && (
                         <div
                           onMouseDown={(e) => e.stopPropagation()}
                           style={{
@@ -414,57 +635,9 @@ export default function SceneOverlay({
                         >
                           <div className="flex items-center gap-1 px-2 border-r border-zinc-200 mr-1">
                             <span className="text-[10px] font-bold text-coral-500 uppercase tracking-tight">
-                              {placed.facing}
+                              {displayFace}
                             </span>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateItem(placed.uid, { facing: cycleFacing(placed.facing, -1) });
-                            }}
-                            style={{
-                              width: 28, height: 28, borderRadius: 8,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              cursor: "pointer", background: "transparent", border: "none",
-                              color: "#52525b",
-                            }}
-                            className="hover:bg-zinc-100 transition-colors"
-                            title="Rotate 90° Left"
-                          >
-                            <RotateCcw size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateItem(placed.uid, { facing: cycleFacing(placed.facing, 1) });
-                            }}
-                            style={{
-                              width: 28, height: 28, borderRadius: 8,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              cursor: "pointer", background: "transparent", border: "none",
-                              color: "#52525b",
-                            }}
-                            className="hover:bg-zinc-100 transition-colors"
-                            title="Rotate 90° Right"
-                          >
-                            <RotateCw size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateItem(placed.uid, { facing: cycleFacing(placed.facing, 2) });
-                            }}
-                            style={{
-                              width: 28, height: 28, borderRadius: 8,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              cursor: "pointer", background: "transparent", border: "none",
-                              color: "#52525b",
-                            }}
-                            className="hover:bg-zinc-100 transition-colors"
-                            title="Rotate 180°"
-                          >
-                            <RefreshCw size={14} />
-                          </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
