@@ -36,7 +36,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const allowed = ['name', 'client', 'event', 'eventType', 'eventDate', 'location', 'status', 'budget', 'currency', 'billingStatus', 'thumbnail', 'venueId', 'data'];
+    const allowed = ['name', 'client', 'event', 'eventType', 'eventDate', 'location', 'status', 'budget', 'currency', 'billingStatus', 'thumbnail', 'venueId', 'data', 'items3D'];
     const update: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) update[key] = body[key];
@@ -46,6 +46,9 @@ export async function PATCH(
     }
     if (body.data !== undefined) {
       update.data = await migratePlacedItemsData(body.data);
+    }
+    if (body.items3D !== undefined) {
+      update.items3D = body.items3D;
     }
 
     const project = await Project.findOneAndUpdate(

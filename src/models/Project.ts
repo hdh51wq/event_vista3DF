@@ -21,6 +21,7 @@ export interface IProject extends Document {
     height?: number;
   }>;
   data?: any;
+  items3D?: Record<string, any>;
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -50,6 +51,7 @@ const ProjectSchema: Schema = new Schema(
       },
     ],
     data:          { type: Schema.Types.Mixed },
+    items3D:       { type: Object, default: {} },
     userId:        { type: Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

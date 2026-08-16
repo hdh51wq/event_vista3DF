@@ -27,6 +27,23 @@ export async function GET(req: NextRequest) {
         address: user.address || '',
         role,
         customFurniture: user.customFurniture,
+        custom3DFurniture: (user.custom3DFurniture ?? []).map(
+          (item: {
+            id?: string;
+            label?: string;
+            price?: number;
+            glbPath?: string;
+            createdAt?: Date | string;
+          }) => ({
+            id: item.id,
+            label: item.label,
+            price: item.price ?? 0,
+            glbPath: item.glbPath,
+            createdAt: item.createdAt
+              ? new Date(item.createdAt).toISOString()
+              : new Date().toISOString(),
+          })
+        ),
       },
     });
   } catch (error: any) {

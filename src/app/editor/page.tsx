@@ -10,13 +10,14 @@ import {
   Share2,
   Sofa,
 } from "lucide-react";
-import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import dynamic from "next/dynamic";
 import FurniturePanel from "@/components/FurniturePanel";
 import { FurnitureItem, FALLBACK_FURNITURE_ITEMS, fetchFurnitureCatalog } from "@/lib/furniture";
 import SceneOverlay, { PlacedItem } from "@/components/SceneOverlay";
+import type { Item3D } from "@/components/ThreeOverlay";
 import { PanoramaViewerHandle } from "@/components/PanoramaViewer";
 import { exportProjectToPdf } from "@/lib/exportPdf";
 import AIChatbot from "@/components/AIChatbot";
@@ -103,11 +104,13 @@ function Editor() {
   const [resolvedVenueName, setResolvedVenueName] = useState<string | null>(null);
   const [furniturePanelOpen, setFurniturePanelOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [showSceneImport, setShowSceneImport] = useState(false);
   const [placedItemsMap, setPlacedItemsMap] = useState<Record<string, PlacedItem[]>>({});
+  const [items3DMap, setItems3DMap] = useState<Record<string, Item3D[]>>({});
   const [budget, setBudget] = useState(0);
   const [customScenes, setCustomScenes] = useState<CustomScene[]>([]);
   const [furnitureCatalog, setFurnitureCatalog] = useState<FurnitureItem[]>(FALLBACK_FURNITURE_ITEMS);
@@ -115,6 +118,7 @@ function Editor() {
 
   const sceneKey = `${eventType}::${sceneIndex}`;
   const placedItems: PlacedItem[] = placedItemsMap[sceneKey] ?? [];
+  const currentItems3D = items3DMap[sceneKey] ?? [];
 
   useEffect(() => {
     if (!token) {
@@ -311,6 +315,7 @@ function Editor() {
   const handleSaveDraft = useCallback(async () => {
     if (!projectId || !token) return;
     setIsSaving(true);
+    setSaveStatus("saving");
     try {
       const response = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
@@ -320,16 +325,25 @@ function Editor() {
         },
         body: JSON.stringify({
           data: placedItemsMap,
+          items3D: items3DMap,
         }),
       });
-      if (!response.ok) throw new Error("Failed to save draft");
-      // Optional: Show success toast
-    } catch (error) {
-      console.error("Save error:", error);
+
+      if (!response.ok) {
+        setSaveStatus("error");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+        return;
+      }
+
+      setSaveStatus("success");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } catch (error: any) {
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 3000);
     } finally {
       setIsSaving(false);
     }
-  }, [projectId, token, placedItemsMap]);
+  }, [projectId, token, placedItemsMap, items3DMap]);
 
     const handleExportStandalone = useCallback(async () => {
     setIsExporting(true);
@@ -569,6 +583,7 @@ function Editor() {
       venueId?: string;
       budget?: number;
       data?: any;
+      items3D?: any;
       customScenes?: Array<{ name: string; src: string; width?: number; height?: number }>;
     }) => {
       setProjectName(data.name ?? "Untitled Project");
@@ -579,6 +594,13 @@ function Editor() {
       setSceneIndex(0);
       setBudget(data.budget ?? 0);
       restoreData(data.data);
+      if (data.items3D) {
+        if (Array.isArray(data.items3D)) {
+          setItems3DMap({ [`${et}::0`]: data.items3D });
+        } else {
+          setItems3DMap(data.items3D);
+        }
+      }
       if (data.customScenes?.length) {
         setCustomScenes(
           data.customScenes.map((cs) => ({
@@ -647,6 +669,7 @@ function Editor() {
         venueId: (local as any).venueId,
         budget: local.budget,
         data: (local as any).data,
+        items3D: (local as any).items3D,
         customScenes: (local as any).customScenes,
       });
       const vid = (local as any).venueId as string | undefined;
@@ -778,7 +801,10 @@ function Editor() {
   }
 
   return (
-    <div className="h-[calc(100vh-112px)] flex flex-col overflow-hidden">
+    <div
+      className="h-[calc(100vh-112px)] flex flex-col overflow-hidden"
+      onDragOver={(e) => e.preventDefault()}
+    >
 
       {/* ── Clean Header ─────────────────────────────────────────────────── */}
       <div
@@ -807,10 +833,22 @@ function Editor() {
           <button
             onClick={handleSaveDraft}
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 disabled:opacity-50 transition-all shadow-sm"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-sm disabled:opacity-50 ${
+              saveStatus === "success"
+                ? "bg-green-500 text-white border border-green-400"
+                : saveStatus === "error"
+                ? "bg-red-500 text-white border border-red-400"
+                : "text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50"
+            }`}
           >
             <Save className={`w-3.5 h-3.5 ${isSaving ? "animate-spin" : ""}`} />
-            {isSaving ? "Saving…" : "Save"}
+            {isSaving
+              ? "Saving…"
+              : saveStatus === "success"
+              ? "✓ Saved!"
+              : saveStatus === "error"
+              ? "✗ Error"
+              : "Save"}
           </button>
           <button
             onClick={handleExportPdf}
@@ -907,7 +945,16 @@ function Editor() {
         <div className="flex-1 relative overflow-hidden bg-zinc-900">
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
             <PanoramaViewer ref={panoramaRef} src={currentScene.src} />
-            <ThreeOverlay viewer={marzipanoViewer ?? panoramaRef.current?.getViewer()} />
+            <ThreeOverlay
+              viewer={marzipanoViewer ?? panoramaRef.current?.getViewer()}
+              initialItems={currentItems3D}
+              onItemsChange={(items) => {
+                setItems3DMap((prev) => ({
+                  ...prev,
+                  [sceneKey]: items,
+                }));
+              }}
+            />
             <SceneOverlay
               placedItems={placedItems}
               onChange={setPlacedItems}
@@ -1093,6 +1140,7 @@ function Editor() {
             onClose={() => setFurniturePanelOpen(false)}
             onAdd={handleAddFurniture}
             catalogItems={furnitureCatalog}
+            projectId={projectId || undefined}
           />
 
           <HintOverlay />

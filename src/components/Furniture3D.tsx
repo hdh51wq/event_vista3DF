@@ -51,7 +51,7 @@ export function Furniture3D({
   }, [scene]);
 
   const position = yawPitchToPosition(yaw, pitch, radius);
-  const facingYaw = yaw + Math.PI;
+  const facingYaw = -yaw;
 
   return (
     <group

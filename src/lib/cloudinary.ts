@@ -11,6 +11,7 @@ export const CLOUDINARY_FOLDERS = [
   "venues",
   "custom-scenes",
   "furniture",
+  "furniture-3d",
 ] as const;
 
 export type CloudinaryFolder = (typeof CLOUDINARY_FOLDERS)[number];
@@ -49,9 +50,30 @@ export async function uploadBufferToCloudinary(
   folder: CloudinaryFolder,
   mimeType: string
 ): Promise<string> {
+  if (folder === "furniture-3d") {
+    return uploadRawBufferToCloudinary(buffer, folder, mimeType);
+  }
   const base64 = buffer.toString("base64");
   const dataUri = `data:${mimeType};base64,${base64}`;
   return uploadToCloudinary(dataUri, folder);
+}
+
+export async function uploadRawBufferToCloudinary(
+  buffer: Buffer,
+  folder: CloudinaryFolder,
+  mimeType: string
+): Promise<string> {
+  if (!isCloudinaryConfigured()) {
+    throw new Error("Cloudinary is not configured");
+  }
+
+  const base64 = buffer.toString("base64");
+  const dataUri = `data:${mimeType || "model/gltf-binary"};base64,${base64}`;
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder: `eventvista/${folder}`,
+    resource_type: "raw",
+  });
+  return result.secure_url;
 }
 
 export async function ensureCloudinaryUrl(
@@ -108,7 +130,10 @@ export async function migratePlacedItemsData(
   return migrated;
 }
 
-export async function deleteFromCloudinary(url: string) {
+export async function deleteFromCloudinary(
+  url: string,
+  resourceType: "image" | "raw" = "image"
+) {
   const uploadMarker = "/upload/";
   const idx = url.indexOf(uploadMarker);
   if (idx < 0) return;
@@ -117,5 +142,5 @@ export async function deleteFromCloudinary(url: string) {
   publicId = publicId.replace(/^v\d+\//, "");
   publicId = publicId.replace(/\.[^/.]+$/, "");
 
-  await cloudinary.uploader.destroy(publicId);
+  await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }

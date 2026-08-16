@@ -43,6 +43,13 @@ export interface User {
     defaultWidth: number;
     defaultHeight: number;
   }>;
+  custom3DFurniture?: Array<{
+    id: string;
+    label: string;
+    price: number;
+    glbPath: string;
+    createdAt: string;
+  }>;
 }
 
 interface AuthContextType {
@@ -62,6 +69,7 @@ interface AuthContextType {
   updateProject: (id: string, data: Partial<Project>) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   removeCustomFurniture: (itemId: string) => Promise<boolean>;
+  removeCustom3DFurniture: (itemId: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -254,6 +262,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const removeCustom3DFurniture = async (itemId: string): Promise<boolean> => {
+    if (!token) return false;
+    const res = await fetch(`/api/furniture/3d?id=${encodeURIComponent(itemId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated = {
+          ...prev,
+          custom3DFurniture: data.items ?? (prev.custom3DFurniture || []).filter((f) => f.id !== itemId),
+        };
+        localStorage.setItem("eventvista_user", JSON.stringify(updated));
+        return updated;
+      });
+      return true;
+    }
+    return false;
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -272,6 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateProject,
       deleteProject,
       removeCustomFurniture,
+      removeCustom3DFurniture,
     }}>
       {children}
     </AuthContext.Provider>

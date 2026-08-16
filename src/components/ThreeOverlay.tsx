@@ -87,35 +87,56 @@ function SyncedScene({
 
 interface ThreeOverlayProps {
   viewer?: unknown;
+  initialItems?: Item3D[];
+  onItemsChange?: (items: Item3D[]) => void;
 }
 
-export default function ThreeOverlay({ viewer }: ThreeOverlayProps) {
+export default function ThreeOverlay({
+  viewer,
+  initialItems,
+  onItemsChange,
+}: ThreeOverlayProps) {
   const currentViewRef = useRef({ yaw: 0, pitch: -0.15 });
-  const [items, setItems] = useState<Item3D[]>([]);
+  const [items, setItems] = useState<Item3D[]>(initialItems ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isDraggingFromPanel, setIsDraggingFromPanel] = useState(false);
+
+  useEffect(() => {
+    setItems(initialItems ?? []);
+  }, [JSON.stringify(initialItems)]);
+
+  const onItemsChangeRef = useRef(onItemsChange);
+  onItemsChangeRef.current = onItemsChange;
+
+  useEffect(() => {
+    onItemsChangeRef.current?.(items);
+  }, [items]);
 
   const selected = items.find((item) => item.id === selectedId) ?? null;
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      const { label, glbPath } = (e as CustomEvent<{ label: string; glbPath: string }>).detail;
-      const id = `3d-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const newItem: Item3D = {
-        id,
-        label,
-        glbPath,
-        yaw: currentViewRef.current.yaw,
-        pitch: -0.15,
-        scale: 3.0,
-        rotationY: 0,
-      };
-      setItems((prev) => [...prev, newItem]);
-      setSelectedId(id);
-    };
+    const onDragStart = () => setIsDragOver(false);
+    const onDragEnd = () => setIsDragOver(false);
 
-    window.addEventListener("add3DFurniture", handler);
-    return () => window.removeEventListener("add3DFurniture", handler);
+    document.addEventListener("dragstart", onDragStart);
+    document.addEventListener("dragend", onDragEnd);
+    return () => {
+      document.removeEventListener("dragstart", onDragStart);
+      document.removeEventListener("dragend", onDragEnd);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onStart = () => setIsDraggingFromPanel(true);
+    const onEnd = () => setIsDraggingFromPanel(false);
+    window.addEventListener("furniture3DDragStart", onStart);
+    window.addEventListener("furniture3DDragEnd", onEnd);
+    return () => {
+      window.removeEventListener("furniture3DDragStart", onStart);
+      window.removeEventListener("furniture3DDragEnd", onEnd);
+    };
   }, []);
 
   const updateSelected = useCallback(
@@ -174,6 +195,73 @@ export default function ThreeOverlay({ viewer }: ThreeOverlayProps) {
           }}
         />
       </Canvas>
+
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 20,
+          pointerEvents: isDraggingFromPanel ? 'all' : 'none',
+          background: isDragOver
+            ? 'rgba(29,158,117,0.15)'
+            : 'transparent',
+          border: isDragOver
+            ? '2px dashed rgba(29,158,117,0.6)'
+            : 'none',
+          borderRadius: 8,
+          transition: 'all 0.15s',
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+          setIsDragOver(true);
+        }}
+        onDragEnter={() => setIsDragOver(true)}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          setIsDraggingFromPanel(false);
+
+          const data = e.dataTransfer.getData('furniture3D');
+          if (!data) return;
+
+          const { label, glbPath } = JSON.parse(data);
+
+          const yaw = -currentViewRef.current.yaw;
+
+          const id = `3d-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          setItems(prev => [...prev, {
+            id,
+            label,
+            glbPath,
+            yaw,
+            pitch: -0.15,
+            scale: 0.5,
+            rotationY: 0,
+          }]);
+          setSelectedId(id);
+        }}
+      />
+
+      {isDragOver && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: 'rgba(29,158,117,0.9)',
+          color: 'white',
+          fontSize: 14,
+          fontWeight: 500,
+          padding: '10px 20px',
+          borderRadius: 20,
+          pointerEvents: 'none',
+          zIndex: 50,
+        }}>
+          Drop here to place in scene
+        </div>
+      )}
 
       {items.length > 0 && (
         <div

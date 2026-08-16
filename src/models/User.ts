@@ -21,6 +21,13 @@ export interface IUser extends Document {
     defaultHeight: number;
     price?: number;
   }>;
+  custom3DFurniture?: Array<{
+    id: string;
+    label: string;
+    price: number;
+    glbPath: string;
+    createdAt: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +59,15 @@ const UserSchema: Schema = new Schema(
         defaultWidth: Number,
         defaultHeight: Number,
         price: Number,
+      },
+    ],
+    custom3DFurniture: [
+      {
+        id: String,
+        label: String,
+        price: Number,
+        glbPath: String,
+        createdAt: { type: Date, default: Date.now },
       },
     ],
   },

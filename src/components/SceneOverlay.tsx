@@ -117,7 +117,21 @@ export default function SceneOverlay({
               next[item.uid] = prev ? { ...prev, visible: false } : { x: 0, y: 0, visible: false, rotateY: 0, rotateX: 0, scale: 1 };
             }
           }
-          setScreenPositions(next);
+          setScreenPositions(prev => {
+            // Only update if something actually changed
+            const hasChanged = Object.keys(next).some(uid => {
+              const p = prev[uid]
+              const n = next[uid]
+              if (!p || !n) return true
+              return p.x !== n.x || 
+                     p.y !== n.y || 
+                     p.visible !== n.visible ||
+                     p.rotateY !== n.rotateY ||
+                     p.rotateX !== n.rotateX ||
+                     p.scale !== n.scale
+            })
+            return hasChanged ? next : prev
+          });
         }
       rafId = requestAnimationFrame(loop);
     };
@@ -360,11 +374,6 @@ export default function SceneOverlay({
             ? `scaleX(${spin.scaleX}) rotateY(${spin.rotateY}deg)`
             : undefined;
           const itemRotY = placed.rotationY ?? 0;
-          const itemRotRad = (itemRotY * Math.PI) / 180;
-          const absScale = Math.abs(Math.cos(itemRotRad));
-          const brightness = 0.72 + absScale * 0.25;
-          const shadowSize = Math.round(placed.height * 0.08);
-          const shadowBlur = Math.round(placed.height * 0.12);
           const isRotating = rotatingUid === placed.uid;
 
         return (
@@ -436,22 +445,6 @@ export default function SceneOverlay({
                 transformOrigin: "center center",
               }}
             >
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: -8,
-                  left: "50%",
-                  transform: `translateX(-50%) scaleX(${0.4 + absScale * 0.6})`,
-                  width: placed.width * 0.75,
-                  height: 14,
-                  background:
-                    "radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, transparent 100%)",
-                  borderRadius: "50%",
-                  pointerEvents: "none",
-                  opacity: 0.35 + absScale * 0.45,
-                  transition: isRotating ? "none" : "all 0.1s ease",
-                }}
-              />
               <Image
                 src={imageSrc}
                 alt={placed.item.label}
@@ -463,28 +456,10 @@ export default function SceneOverlay({
                   objectFit: "contain",
                   pointerEvents: "none",
                   transform: `perspective(600px) rotateY(${itemRotY}deg)`,
-                  filter: `
-                    drop-shadow(0px ${shadowSize}px ${shadowBlur}px rgba(0,0,0,0.55))
-                    brightness(${brightness})
-                    contrast(1.05)
-                    saturate(0.95)
-                  `,
                   transition: isRotating ? "none" : "transform 0.1s ease",
                 }}
                 unoptimized
                 draggable={false}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  height: "22%",
-                  background: "linear-gradient(to top, rgba(0,0,0,0.20), transparent)",
-                  pointerEvents: "none",
-                  borderRadius: "0 0 4px 4px",
-                }}
               />
             </div>
 
