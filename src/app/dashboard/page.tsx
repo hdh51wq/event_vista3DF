@@ -128,7 +128,7 @@ function projectToForm(p: Project): ProjectForm {
     client:        p.client        ?? "",
     event:         p.event         ?? "",
     eventType:     (p.eventType as EventType) ?? "Wedding",
-    eventDate:     p.eventDate ?? "",
+    eventDate:     p.eventDate ? new Date(p.eventDate).toISOString().slice(0, 10) : "",
     location:      p.location      ?? "",
     status:        p.status        ?? "Draft",
     budget:        p.budget != null ? String(p.budget) : "",
@@ -238,9 +238,12 @@ function SelectDropdown<T extends string>({ value, onChange, options, placeholde
 
 // ─── Shared Modal Form Fields ─────────────────────────────────────────────────
 
-function ProjectFormFields({ form, setForm }: {
+function ProjectFormFields({ form, setForm, minDate }: {
   form: ProjectForm;
   setForm: React.Dispatch<React.SetStateAction<ProjectForm>>;
+  // Only set on create: editing an existing project must allow its
+  // original date, even if it is in the past.
+  minDate?: string;
 }) {
   const set = (key: keyof ProjectForm) => (val: string) => setForm(f => ({ ...f, [key]: val }));
 
@@ -321,7 +324,7 @@ function ProjectFormFields({ form, setForm }: {
           type="date"
           value={form.eventDate}
           onChange={(e) => setForm((f) => ({ ...f, eventDate: e.target.value }))}
-          min={new Date().toISOString().split("T")[0]}
+          min={minDate}
           required
           className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100"
         />
@@ -959,7 +962,7 @@ export default function DashboardPage() {
       <ModalShell open={isCreateOpen} onClose={() => { setIsCreateOpen(false); setCreateForm(EMPTY_FORM); }}
         title="Create New Project" subtitle="Set up your event workspace"
         onSubmit={handleCreate} submitLabel="Create Project" loading={loading}>
-        <ProjectFormFields form={createForm} setForm={setCreateForm} />
+        <ProjectFormFields form={createForm} setForm={setCreateForm} minDate={new Date().toISOString().split("T")[0]} />
       </ModalShell>
 
       {/* ── Edit Modal ── */}
