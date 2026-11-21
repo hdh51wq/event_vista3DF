@@ -54,7 +54,7 @@ export async function validate360Scene(file: File): Promise<string | null> {
 }
 
 async function compressScene(file: File): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = () => {
@@ -68,10 +68,19 @@ async function compressScene(file: File): Promise<string> {
       const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
-      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Could not process image."));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
 
       // Compress as JPEG at 0.82 quality
       resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read file. Please try another image."));
     };
     img.src = url;
   });
@@ -171,7 +180,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
     void handleFile(f);
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!file || !dims) return;
     if (!token) {
       setError("You must be signed in to import a scene.");
@@ -179,16 +188,17 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
     }
     setImporting(true);
     setError(null);
-    compressScene(file)
-      .then((dataUrl) => uploadImage(dataUrl, "custom-scenes", token))
-      .then((src) => {
-        onImport({ name: sceneName || "Imported Scene", src, width: dims.width, height: dims.height });
-        reset();
-      })
-      .catch(() => {
-        setError("Failed to upload scene image. Please try again.");
-        setImporting(false);
-      });
+    try {
+      const dataUrl = await compressScene(file);
+      const src = await uploadImage(dataUrl, "custom-scenes", token);
+      onImport({ name: sceneName || "Imported Scene", src, width: dims.width, height: dims.height });
+      reset();
+    } catch (err) {
+      // Surface the real upload error instead of a generic message, so a
+      // failed import is never silent again.
+      setError(err instanceof Error ? err.message : "Failed to upload scene image. Please try again.");
+      setImporting(false);
+    }
   };
 
   useEffect(() => {
@@ -353,6 +363,16 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                     Original: {formatBytes(file.size)} → Compressed:{" "}
                     {isEstimating ? "estimating…" : compressedBytes ? `~${formatBytes(compressedBytes)}` : "—"}
                   </div>
+
+                  {error && (
+                    <div className="flex items-start gap-2 rounded-2xl bg-red-500/10 border border-red-500/40 px-3 py-2.5 text-[11px] text-red-100">
+                      <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
+                      <div>
+                        <p className="font-semibold mb-0.5">Import failed</p>
+                        <p>{error}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {dims.width < 2048 && (
                     <div className="flex items-start gap-2 rounded-2xl bg-amber-500/10 border border-amber-400/50 px-3 py-2.5 text-[11px] text-amber-100">
