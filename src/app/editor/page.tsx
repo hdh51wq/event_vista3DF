@@ -641,8 +641,9 @@ function Editor() {
         // ('/scenes/grand-hall-thumb.jpg'), and public/scenes/ does not
         // exist, so that URL 404s and Marzipano shows a black view — and
         // the editor auto-selects this scene on entry, so the user always
-        // lands on black. Fall back to the default panorama with the same
-        // name as the venue; if there is none, do not add a venue scene.
+        // lands on black. Fall back to the real panorama with the same
+        // name as the venue (searched across all event types); if there
+        // is none, land on the venue's configured scene instead.
         const sceneImageUrl =
           typeof venue.sceneImageUrl === "string" ? venue.sceneImageUrl : "";
         const isPanoramaUrl = /^https?:\/\//i.test(sceneImageUrl);
@@ -666,17 +667,45 @@ function Editor() {
           setCustomScenes([venueScene, ...rest]);
           setSceneIndex(baseLen);
         } else {
-          const fallback = defaultScenesList.find(
-            (s) => s.label.toLowerCase() === String(venue.name ?? "").toLowerCase()
-          );
-          if (fallback) {
-            const fallbackIdx = defaultScenesList.indexOf(fallback);
-            // Furniture placed while the broken venue scene was selected
-            // lives under the old venue-scene key (baseLen). Move it to
-            // the fallback scene so it stays visible instead of vanishing
-            // along with the removed scene.
+          // "Grand Hall" lives under Gala Dinner, not Wedding, so search
+          // every event type's list for a panorama with the venue's name.
+          // If one exists, re-add the venue scene at the same index the
+          // broken venue scene had (baseLen), pointing at the real
+          // panorama — furniture placed on the old black scene then
+          // reappears on it, since it is stored under that same key.
+          const match = Object.values(EVENT_SCENES)
+            .flat()
+            .find(
+              (s) =>
+                s.label.toLowerCase() === String(venue.name ?? "").toLowerCase()
+            );
+          if (match) {
+            const venueScene: CustomScene = {
+              name: venue.name,
+              src: match.src,
+              width: 4096,
+              height: 2048,
+              isCustom: true,
+            };
+            const saved = (projectCustomScenes ?? []).map((cs) => ({
+              name: cs.name,
+              src: cs.src,
+              width: cs.width ?? 0,
+              height: cs.height ?? 0,
+              isCustom: true as const,
+            }));
+            const rest = saved.filter(
+              (c) => c.src !== sceneImageUrl && c.src !== match.src
+            );
+            setCustomScenes([venueScene, ...rest]);
+            setSceneIndex(baseLen);
+          } else if (venue.sceneIndex !== undefined && venue.sceneIndex !== null) {
+            // No panorama matches the venue name: land on the venue's
+            // configured scene, moving any furniture stored under the old
+            // venue-scene key there so it does not vanish with the scene.
+            const targetIdx = Number(venue.sceneIndex);
             const fromKey = `${et}::${baseLen}`;
-            const toKey = `${et}::${fallbackIdx}`;
+            const toKey = `${et}::${targetIdx}`;
             setPlacedItemsMap((prev) => {
               if (!prev[fromKey]?.length) return prev;
               const next = { ...prev };
@@ -691,9 +720,7 @@ function Editor() {
               delete next[fromKey];
               return next;
             });
-            setSceneIndex(fallbackIdx);
-          } else if (venue.sceneIndex !== undefined && venue.sceneIndex !== null) {
-            setSceneIndex(Number(venue.sceneIndex));
+            setSceneIndex(targetIdx);
           }
         }
       } catch (err) {
