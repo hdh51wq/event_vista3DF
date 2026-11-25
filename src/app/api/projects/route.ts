@@ -34,13 +34,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, client, event, eventType, eventDate, location, budget, currency, billingStatus, status, venueId } = await req.json();
+    const { name, client, event, eventType, eventDate, location, budget, currency, billingStatus, status, venueId, customScenes, customScenesOnly, sceneCount, thumbnail: thumbnailFromBody } = await req.json();
     if (!name) {
       return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
     }
 
     const resolvedType = eventType ?? 'Wedding';
-    const thumbnail = EVENT_THUMBNAILS[resolvedType] ?? EVENT_THUMBNAILS['Wedding'];
+    // Templates pass the scene image as the thumbnail; otherwise fall back
+    // to the event-type photo.
+    const thumbnail = thumbnailFromBody ?? EVENT_THUMBNAILS[resolvedType] ?? EVENT_THUMBNAILS['Wedding'];
+    // sceneCount was never set on create, so the dashboard showed "0 scenes"
+    // for every project. Default to the number of scenes the project will
+    // actually open with (event-type defaults, or the template's scenes).
+    const DEFAULT_SCENE_COUNTS: Record<string, number> = { Wedding: 3, Conference: 4, 'Gala Dinner': 3 };
+    const resolvedSceneCount = sceneCount ?? (customScenesOnly ? (customScenes?.length ?? 0) : (DEFAULT_SCENE_COUNTS[resolvedType] ?? 3));
 
     const project = await Project.create({
       name,
@@ -51,10 +58,13 @@ export async function POST(req: NextRequest) {
       location,
       status:        status        ?? 'Draft',
       thumbnail,
+      sceneCount:    resolvedSceneCount,
       budget:        budget        ?? 0,
       currency:      currency      ?? 'USD',
       billingStatus: billingStatus ?? 'pending',
       venueId:       venueId ?? undefined,
+      customScenes:  Array.isArray(customScenes) ? customScenes : undefined,
+      customScenesOnly: customScenesOnly ?? false,
       userId,
     });
 
