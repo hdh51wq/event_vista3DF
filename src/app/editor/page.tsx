@@ -247,15 +247,19 @@ function Editor() {
       const view = panoramaRef.current?.getView();
       const container = panoramaRef.current?.getContainer();
 
-      // Default: drop at screen centre
+      // Default: drop on the floor, slightly right of centre so it's
+      // visible and not hidden by panel. 62% down the screen lands at
+      // pitch ~0.13, inside the floor band (0.04–0.18); dropping at the
+      // vertical centre (pitch 0) left furniture floating on the wall
+      // at eye level, half-hidden in the decor.
       let yaw = view ? view.yaw() : 0;
-      let pitch = view ? view.pitch() : 0;
+      let pitch = view ? view.pitch() : 0.1;
 
       if (view && container) {
         const rect = container.getBoundingClientRect();
         // Drop slightly right of centre so it's visible and not hidden by panel
         const sx = rect.width * 0.45;
-        const sy = rect.height * 0.5;
+        const sy = rect.height * 0.62;
         const world = view.screenToCoordinates({ x: sx, y: sy });
         if (world) { yaw = world.yaw; pitch = world.pitch; }
       }
@@ -282,12 +286,12 @@ function Editor() {
       const container = panoramaRef.current?.getContainer();
 
       let yaw = view ? view.yaw() : 0;
-      let pitch = view ? view.pitch() : 0;
+      let pitch = view ? view.pitch() : 0.1;
 
       if (view && container) {
         const rect = container.getBoundingClientRect();
         const sx = rect.width * 0.45;
-        const sy = rect.height * 0.5;
+        const sy = rect.height * 0.62;
         const world = view.screenToCoordinates({ x: sx, y: sy });
         if (world) {
           yaw = world.yaw;
@@ -563,9 +567,24 @@ function Editor() {
 
     const restoreData = (data: any) => {
       if (data && typeof data === "object") {
-        setPlacedItemsMap(data);
+        // 2D furniture sits on the floor — the editor's own debug panel
+        // calls pitch 0.04–0.18 the good floor band. Items dropped while
+        // the scene was black landed at pitch 0 (horizon) and floated on
+        // the wall at eye level, half-hidden in the decor. Nudge those
+        // down to the floor band on load (yaw untouched).
+        const normalized: Record<string, any[]> = {};
+        Object.entries(data).forEach(([key, items]) => {
+          normalized[key] = Array.isArray(items)
+            ? items.map((item: any) =>
+                typeof item?.pitch === "number" && item.pitch < 0.04
+                  ? { ...item, pitch: 0.1 }
+                  : item
+              )
+            : (items as any[]);
+        });
+        setPlacedItemsMap(normalized);
         let maxId = 0;
-        Object.values(data).forEach((items: any) => {
+        Object.values(normalized).forEach((items: any) => {
           if (Array.isArray(items)) {
             items.forEach((item: any) => {
               const num = parseInt(item.uid?.split("-")[1] || "0");
