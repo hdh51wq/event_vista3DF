@@ -30,59 +30,42 @@ interface TemplateScene {
   rentPrice: number;
 }
 
-// Each template has exactly ONE scene, and the card shows that scene's own
-// photo. Using a template creates a project that opens with just that
-// scene (customScenesOnly) instead of the generic event-type scenes.
-const TEMPLATE_PROJECTS: Array<Partial<Project> & { scene: TemplateScene }> = [
-  {
-    name: "Luxury Wedding Template",
-    client: "Template",
-    event: "Grand Wedding",
-    eventType: "Wedding",
-    location: "Palais Royale",
-    status: "Draft",
-    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/dancing_hall.jpg`),
-    sceneCount: 1,
-    scene: {
-      label: "Dancing Hall",
-      src: `${POLYHAVEN_BASE}/dancing_hall.jpg`,
-      dimensions: "25m x 40m",
-      rentPrice: 1500,
-    },
-  },
-  {
-    name: "Tech Conference Layout",
-    client: "Template",
-    event: "Innovation Summit",
-    eventType: "Conference",
-    location: "Convention Center",
-    status: "Draft",
-    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/theater_02.jpg`),
-    sceneCount: 1,
-    scene: {
-      label: "Main Theater",
-      src: `${POLYHAVEN_BASE}/theater_02.jpg`,
-      dimensions: "40m x 60m",
-      rentPrice: 3500,
-    },
-  },
-  {
-    name: "Gala Dinner Setup",
-    client: "Template",
-    event: "Annual Charity Gala",
-    eventType: "Gala Dinner",
-    location: "Grand Ballroom",
-    status: "Draft",
-    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/old_hall.jpg`),
-    sceneCount: 1,
-    scene: {
-      label: "Grand Hall",
-      src: `${POLYHAVEN_BASE}/old_hall.jpg`,
-      dimensions: "45m x 70m",
-      rentPrice: 4500,
-    },
-  }
+// Each template is ONE scene: one template per scene in the app (10 in
+// total), named after the scene, with its dimensions and its own photo.
+// Using a template creates a project that opens with just that scene
+// (customScenesOnly) instead of the generic event-type scenes.
+const SCENE_TEMPLATES: Array<{
+  eventType: "Wedding" | "Conference" | "Gala Dinner";
+  location: string;
+  scene: TemplateScene;
+}> = [
+  // Wedding (3)
+  { eventType: "Wedding", location: "Palais Royale", scene: { label: "Dancing Hall", src: `${POLYHAVEN_BASE}/dancing_hall.jpg`, dimensions: "25m x 40m", rentPrice: 1500 } },
+  { eventType: "Wedding", location: "Palais Royale", scene: { label: "Music Hall", src: `${POLYHAVEN_BASE}/music_hall_02.jpg`, dimensions: "30m x 50m", rentPrice: 2200 } },
+  { eventType: "Wedding", location: "Palais Royale", scene: { label: "Pillared Hall", src: `${POLYHAVEN_BASE}/solitude_interior.jpg`, dimensions: "20m x 30m", rentPrice: 1200 } },
+  // Conference (4)
+  { eventType: "Conference", location: "Convention Center", scene: { label: "Main Theater", src: `${POLYHAVEN_BASE}/theater_02.jpg`, dimensions: "40m x 60m", rentPrice: 3500 } },
+  { eventType: "Conference", location: "Convention Center", scene: { label: "Stage Hall", src: `${POLYHAVEN_BASE}/theater_01.jpg`, dimensions: "35m x 45m", rentPrice: 2800 } },
+  { eventType: "Conference", location: "Convention Center", scene: { label: "Lecture Hall", src: `${POLYHAVEN_BASE}/school_hall.jpg`, dimensions: "20m x 25m", rentPrice: 800 } },
+  { eventType: "Conference", location: "Convention Center", scene: { label: "Screening Room", src: `${POLYHAVEN_BASE}/cinema_hall.jpg`, dimensions: "15m x 20m", rentPrice: 600 } },
+  // Gala Dinner (3)
+  { eventType: "Gala Dinner", location: "Grand Ballroom", scene: { label: "Grand Hall", src: `${POLYHAVEN_BASE}/old_hall.jpg`, dimensions: "45m x 70m", rentPrice: 4500 } },
+  { eventType: "Gala Dinner", location: "Grand Ballroom", scene: { label: "Entrance Hall", src: `${POLYHAVEN_BASE}/entrance_hall.jpg`, dimensions: "15m x 30m", rentPrice: 1000 } },
+  { eventType: "Gala Dinner", location: "Grand Ballroom", scene: { label: "Long Gallery", src: `${POLYHAVEN_BASE}/large_corridor.jpg`, dimensions: "10m x 80m", rentPrice: 1800 } },
 ];
+
+const TEMPLATE_PROJECTS: Array<Partial<Project> & { scene: TemplateScene }> =
+  SCENE_TEMPLATES.map(({ eventType, location, scene }) => ({
+    name: `${scene.label} Template`,
+    client: "Template",
+    event: scene.label,
+    eventType,
+    location,
+    status: "Draft",
+    thumbnail: sceneThumb(scene.src),
+    sceneCount: 1,
+    scene,
+  }));
 
 // ─── Page Component ───────────────────────────────────────────────────────────
 
@@ -198,7 +181,7 @@ export default function TemplatesPage() {
                 <div>
                   <h3 className="font-bold text-zinc-900 text-lg mb-1">{template.name}</h3>
                   <div className="flex items-center gap-3 text-xs text-zinc-400">
-                    <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {template.sceneCount} {template.sceneCount === 1 ? "Scene" : "Scenes"} · {template.scene.label}</span>
+                    <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {template.sceneCount} {template.sceneCount === 1 ? "Scene" : "Scenes"} · {template.scene.dimensions}</span>
                     <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {template.location}</span>
                   </div>
                 </div>
