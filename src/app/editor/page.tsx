@@ -15,7 +15,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import dynamic from "next/dynamic";
 import FurniturePanel from "@/components/FurniturePanel";
-import { FurnitureItem, FALLBACK_FURNITURE_ITEMS, fetchFurnitureCatalog } from "@/lib/furniture";
+import { FurnitureItem, FALLBACK_FURNITURE_ITEMS, FURNITURE_SIZE_SCALE, fetchFurnitureCatalog } from "@/lib/furniture";
 import SceneOverlay, { PlacedItem } from "@/components/SceneOverlay";
 import type { Item3D } from "@/components/ThreeOverlay";
 import { PanoramaViewerHandle } from "@/components/PanoramaViewer";
@@ -248,8 +248,8 @@ function Editor() {
       const container = panoramaRef.current?.getContainer();
 
       // Default: drop on the floor, slightly right of centre so it's
-      // visible and not hidden by panel. 62% down the screen lands at
-      // pitch ~0.13, inside the floor band (0.04–0.18); dropping at the
+      // visible and not hidden by panel. 55% down the screen lands at
+      // pitch ~0.10, inside the floor band (0.04–0.18); dropping at the
       // vertical centre (pitch 0) left furniture floating on the wall
       // at eye level, half-hidden in the decor.
       let yaw = view ? view.yaw() : 0;
@@ -259,7 +259,7 @@ function Editor() {
         const rect = container.getBoundingClientRect();
         // Drop slightly right of centre so it's visible and not hidden by panel
         const sx = rect.width * 0.45;
-        const sy = rect.height * 0.62;
+        const sy = rect.height * 0.55;
         const world = view.screenToCoordinates({ x: sx, y: sy });
         if (world) { yaw = world.yaw; pitch = world.pitch; }
       }
@@ -291,7 +291,7 @@ function Editor() {
       if (view && container) {
         const rect = container.getBoundingClientRect();
         const sx = rect.width * 0.45;
-        const sy = rect.height * 0.62;
+        const sy = rect.height * 0.55;
         const world = view.screenToCoordinates({ x: sx, y: sy });
         if (world) {
           yaw = world.yaw;
@@ -572,14 +572,36 @@ function Editor() {
         // the scene was black landed at pitch 0 (horizon) and floated on
         // the wall at eye level, half-hidden in the decor. Nudge those
         // down to the floor band on load (yaw untouched).
+        // Also: old placed items are tiny (60–80 px divs whose drawings
+        // cover only ~25% of the image), rendering as 20 px specks.
+        // Scale up items never resized by the user (still at their
+        // embedded catalog default size) to the new catalog scale.
         const normalized: Record<string, any[]> = {};
         Object.entries(data).forEach(([key, items]) => {
           normalized[key] = Array.isArray(items)
-            ? items.map((item: any) =>
-                typeof item?.pitch === "number" && item.pitch < 0.04
-                  ? { ...item, pitch: 0.1 }
-                  : item
-              )
+            ? items.map((item: any) => {
+                let next = item;
+                if (typeof item?.pitch === "number" && item.pitch < 0.04) {
+                  next = { ...next, pitch: 0.1 };
+                }
+                const dw = item?.item?.defaultWidth;
+                const dh = item?.item?.defaultHeight;
+                if (
+                  typeof item?.width === "number" &&
+                  typeof item?.height === "number" &&
+                  typeof dw === "number" &&
+                  typeof dh === "number" &&
+                  item.width === dw &&
+                  item.height === dh
+                ) {
+                  next = {
+                    ...next,
+                    width: item.width * FURNITURE_SIZE_SCALE,
+                    height: item.height * FURNITURE_SIZE_SCALE,
+                  };
+                }
+                return next;
+              })
             : (items as any[]);
         });
         setPlacedItemsMap(normalized);
