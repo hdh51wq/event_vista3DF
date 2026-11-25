@@ -15,7 +15,23 @@ import { cn } from "@/lib/utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TEMPLATE_PROJECTS: Partial<Project>[] = [
+// Polyhaven panoramas (same source the editor uses; served through Next.js'
+// image optimizer so the card shows the actual scene photo, fast).
+const POLYHAVEN_BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
+const sceneThumb = (src: string) =>
+  `/_next/image?url=${encodeURIComponent(src)}&w=800&q=75`;
+
+interface TemplateScene {
+  label: string;
+  src: string;
+  dimensions: string;
+  rentPrice: number;
+}
+
+// Each template has exactly ONE scene, and the card shows that scene's own
+// photo. Using a template creates a project that opens with just that
+// scene (customScenesOnly) instead of the generic event-type scenes.
+const TEMPLATE_PROJECTS: Array<Partial<Project> & { scene: TemplateScene }> = [
   {
     name: "Luxury Wedding Template",
     client: "Template",
@@ -23,8 +39,14 @@ const TEMPLATE_PROJECTS: Partial<Project>[] = [
     eventType: "Wedding",
     location: "Palais Royale",
     status: "Draft",
-    thumbnail: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800&auto=format&fit=crop",
-    sceneCount: 3,
+    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/dancing_hall.jpg`),
+    sceneCount: 1,
+    scene: {
+      label: "Dancing Hall",
+      src: `${POLYHAVEN_BASE}/dancing_hall.jpg`,
+      dimensions: "25m x 40m",
+      rentPrice: 1500,
+    },
   },
   {
     name: "Tech Conference Layout",
@@ -33,8 +55,14 @@ const TEMPLATE_PROJECTS: Partial<Project>[] = [
     eventType: "Conference",
     location: "Convention Center",
     status: "Draft",
-    thumbnail: "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?q=80&w=800&auto=format&fit=crop",
-    sceneCount: 4,
+    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/theater_02.jpg`),
+    sceneCount: 1,
+    scene: {
+      label: "Main Theater",
+      src: `${POLYHAVEN_BASE}/theater_02.jpg`,
+      dimensions: "40m x 60m",
+      rentPrice: 3500,
+    },
   },
   {
     name: "Gala Dinner Setup",
@@ -43,8 +71,14 @@ const TEMPLATE_PROJECTS: Partial<Project>[] = [
     eventType: "Gala Dinner",
     location: "Grand Ballroom",
     status: "Draft",
-    thumbnail: "https://images.unsplash.com/photo-1566417713940-fe7c737a9ef2?q=80&w=800&auto=format&fit=crop",
-    sceneCount: 3,
+    thumbnail: sceneThumb(`${POLYHAVEN_BASE}/old_hall.jpg`),
+    sceneCount: 1,
+    scene: {
+      label: "Grand Hall",
+      src: `${POLYHAVEN_BASE}/old_hall.jpg`,
+      dimensions: "45m x 70m",
+      rentPrice: 4500,
+    },
   }
 ];
 
@@ -61,13 +95,19 @@ export default function TemplatesPage() {
     if (!isLoggedIn) router.push("/login");
   }, [authLoading, isLoggedIn, router]);
 
-  const handleUseTemplate = async (template: Partial<Project>) => {
+  const handleUseTemplate = async (template: (typeof TEMPLATE_PROJECTS)[number]) => {
     setLoading(true);
     try {
+      const { scene, ...projectData } = template;
       await createProject({
-        ...template,
+        ...projectData,
         name: `${template.name} (from Template)`,
         status: "Draft",
+        sceneCount: 1,
+        customScenes: [
+          { name: scene.label, src: scene.src, width: 4096, height: 2048 },
+        ],
+        customScenesOnly: true,
       });
       toast.success("Project created from template!");
       router.push("/dashboard");
@@ -156,7 +196,7 @@ export default function TemplatesPage() {
                 <div>
                   <h3 className="font-bold text-zinc-900 text-lg mb-1">{template.name}</h3>
                   <div className="flex items-center gap-3 text-xs text-zinc-400">
-                    <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {template.sceneCount} Scenes</span>
+                    <span className="flex items-center gap-1"><Layers className="w-3 h-3" /> {template.sceneCount} {template.sceneCount === 1 ? "Scene" : "Scenes"} · {template.scene.label}</span>
                     <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {template.location}</span>
                   </div>
                 </div>
