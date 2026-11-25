@@ -644,12 +644,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleVenueSkip = () => {
-    if (!venueSelectorProject) return;
-    router.push(`/editor?id=${venueSelectorProject.id}`);
-    setVenueSelectorProject(null);
-  };
-
   if (authLoading || !isLoggedIn) return null;
 
   return (
@@ -659,7 +653,6 @@ export default function DashboardPage() {
           eventType={venueSelectorProject.eventType}
           eventDate={venueSelectorProject.eventDate}
           onSceneSelect={handleSceneSelect}
-          onSkip={handleVenueSkip}
         />
       )}
 
