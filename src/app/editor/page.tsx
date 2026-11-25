@@ -635,10 +635,22 @@ function Editor() {
         const defaultScenesList = EVENT_SCENES[et] ?? EVENT_SCENES["Wedding"];
         const baseLen = defaultScenesList.length;
 
-        if (venue.sceneImageUrl) {
+        // The venue's sceneImageUrl is only a real panorama when it is an
+        // absolute URL (e.g. an admin-uploaded Cloudinary panorama). Seeded
+        // venues store a relative thumbnail path instead
+        // ('/scenes/grand-hall-thumb.jpg'), and public/scenes/ does not
+        // exist, so that URL 404s and Marzipano shows a black view — and
+        // the editor auto-selects this scene on entry, so the user always
+        // lands on black. Fall back to the default panorama with the same
+        // name as the venue; if there is none, do not add a venue scene.
+        const sceneImageUrl =
+          typeof venue.sceneImageUrl === "string" ? venue.sceneImageUrl : "";
+        const isPanoramaUrl = /^https?:\/\//i.test(sceneImageUrl);
+
+        if (isPanoramaUrl) {
           const venueScene: CustomScene = {
             name: venue.name,
-            src: venue.sceneImageUrl,
+            src: sceneImageUrl,
             width: 4096,
             height: 2048,
             isCustom: true,
@@ -650,11 +662,39 @@ function Editor() {
             height: cs.height ?? 0,
             isCustom: true as const,
           }));
-          const rest = saved.filter((c) => c.src !== venue.sceneImageUrl);
+          const rest = saved.filter((c) => c.src !== sceneImageUrl);
           setCustomScenes([venueScene, ...rest]);
           setSceneIndex(baseLen);
-        } else if (venue.sceneIndex !== undefined && venue.sceneIndex !== null) {
-          setSceneIndex(Number(venue.sceneIndex));
+        } else {
+          const fallback = defaultScenesList.find(
+            (s) => s.label.toLowerCase() === String(venue.name ?? "").toLowerCase()
+          );
+          if (fallback) {
+            const fallbackIdx = defaultScenesList.indexOf(fallback);
+            // Furniture placed while the broken venue scene was selected
+            // lives under the old venue-scene key (baseLen). Move it to
+            // the fallback scene so it stays visible instead of vanishing
+            // along with the removed scene.
+            const fromKey = `${et}::${baseLen}`;
+            const toKey = `${et}::${fallbackIdx}`;
+            setPlacedItemsMap((prev) => {
+              if (!prev[fromKey]?.length) return prev;
+              const next = { ...prev };
+              next[toKey] = [...(next[toKey] ?? []), ...next[fromKey]];
+              delete next[fromKey];
+              return next;
+            });
+            setItems3DMap((prev) => {
+              if (!prev[fromKey]?.length) return prev;
+              const next = { ...prev };
+              next[toKey] = [...(next[toKey] ?? []), ...next[fromKey]];
+              delete next[fromKey];
+              return next;
+            });
+            setSceneIndex(fallbackIdx);
+          } else if (venue.sceneIndex !== undefined && venue.sceneIndex !== null) {
+            setSceneIndex(Number(venue.sceneIndex));
+          }
         }
       } catch (err) {
         console.warn("Could not load venue scene:", err);
