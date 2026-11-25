@@ -18,6 +18,13 @@ export interface Project {
   currency: string;
   billingStatus: 'pending' | 'paid' | 'cancelled';
   venueId?: string;
+  customScenes?: Array<{
+    name: string;
+    src: string;
+    width?: number;
+    height?: number;
+  }>;
+  customScenesOnly?: boolean;
   data?: any;
   createdAt: string;
   updatedAt: string;
