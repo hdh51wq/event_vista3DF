@@ -1212,9 +1212,13 @@ function Editor() {
                 >
                   + Import Scene
                 </button>
-                {customScenes.length >= 3 && (
+                {customScenes.length >= 3 ? (
                   <span className="text-[9px] text-red-400/80 ml-1">
-                    Max 3 custom scenes reached
+                    Max 3 custom scenes per project reached
+                  </span>
+                ) : (
+                  <span className="text-[9px] text-white/50 ml-1">
+                    Custom scenes: {customScenes.length}/3 — max 3 per project
                   </span>
                 )}
               </div>
