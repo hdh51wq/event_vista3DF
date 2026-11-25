@@ -113,6 +113,8 @@ function Editor() {
   const [items3DMap, setItems3DMap] = useState<Record<string, Item3D[]>>({});
   const [budget, setBudget] = useState(0);
   const [customScenes, setCustomScenes] = useState<CustomScene[]>([]);
+  /** Template projects show only their own scene(s), no event-type defaults. */
+  const [customScenesOnly, setCustomScenesOnly] = useState(false);
   const [furnitureCatalog, setFurnitureCatalog] = useState<FurnitureItem[]>(FALLBACK_FURNITURE_ITEMS);
 
 
@@ -536,8 +538,10 @@ function Editor() {
   const defaultScenes: Scene[] = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).map(
     (s) => ({ ...s, isCustom: false })
   );
+  // Template projects open with only their own scene(s) — no defaults.
+  const baseScenes: Scene[] = customScenesOnly ? [] : defaultScenes;
   const allScenes: Scene[] = [
-    ...defaultScenes,
+    ...baseScenes,
     ...customScenes.map((cs) => ({
       label: cs.name,
       src: cs.src,
@@ -626,6 +630,7 @@ function Editor() {
       data?: any;
       items3D?: any;
       customScenes?: Array<{ name: string; src: string; width?: number; height?: number }>;
+      customScenesOnly?: boolean;
     }) => {
       setProjectName(data.name ?? "Untitled Project");
       const et = data.eventType ?? "Wedding";
@@ -634,6 +639,7 @@ function Editor() {
       setResolvedVenueName(null);
       setSceneIndex(0);
       setBudget(data.budget ?? 0);
+      setCustomScenesOnly(data.customScenesOnly ?? false);
       restoreData(data.data);
       if (data.items3D) {
         if (Array.isArray(data.items3D)) {
@@ -660,7 +666,8 @@ function Editor() {
     const loadVenueScene = async (
       venueIdStr: string,
       et: string,
-      projectCustomScenes: Array<{ name: string; src: string; width?: number; height?: number }> | undefined
+      projectCustomScenes: Array<{ name: string; src: string; width?: number; height?: number }> | undefined,
+      customOnly = false
     ) => {
       if (!token) return;
       try {
@@ -674,7 +681,9 @@ function Editor() {
         setResolvedVenueName(typeof venue.name === "string" ? venue.name : null);
 
         const defaultScenesList = EVENT_SCENES[et] ?? EVENT_SCENES["Wedding"];
-        const baseLen = defaultScenesList.length;
+        // Template projects have no event-type defaults, so the venue
+        // scene (if one is ever added) sits at index 0, not baseLen.
+        const baseLen = customOnly ? 0 : defaultScenesList.length;
 
         // The venue's sceneImageUrl is only a real panorama when it is an
         // absolute URL (e.g. an admin-uploaded Cloudinary panorama). Seeded
@@ -779,10 +788,11 @@ function Editor() {
         data: (local as any).data,
         items3D: (local as any).items3D,
         customScenes: (local as any).customScenes,
+        customScenesOnly: (local as any).customScenesOnly,
       });
       const vid = (local as any).venueId as string | undefined;
       if (vid && token) {
-        void loadVenueScene(vid, local.eventType ?? "Wedding", (local as any).customScenes);
+        void loadVenueScene(vid, local.eventType ?? "Wedding", (local as any).customScenes, (local as any).customScenesOnly ?? false);
       }
       return () => {
         cancelled = true;
@@ -802,7 +812,8 @@ function Editor() {
           void loadVenueScene(
             data.venueId,
             data.eventType ?? "Wedding",
-            data.customScenes
+            data.customScenes,
+            data.customScenesOnly ?? false
           );
         }
       })
@@ -845,6 +856,9 @@ function Editor() {
   }
 
   function removeCustomScene(index: number) {
+    // A template project's single scene cannot be removed — the project
+    // would be left with no scene at all.
+    if (customScenesOnly && customScenes.length <= 1) return;
     if (
       !confirm(
         "Remove this custom scene? Any furniture placed in it will be lost."
@@ -852,7 +866,7 @@ function Editor() {
     )
       return;
 
-    const baseLength = defaultScenes.length;
+    const baseLength = baseScenes.length;
     const removedGlobalIndex = baseLength + index;
 
     // Remove placed items for the removed scene AND shift any later custom-scene keys down by 1.
@@ -1120,15 +1134,16 @@ function Editor() {
                       <span className="px-1.5 py-0.5 rounded-full border border-white/30 text-[8px] uppercase tracking-wider text-white/80">
                         Custom
                       </span>
-                      <button
-                        onClick={() => {
-                          const baseLength = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).length;
-                          removeCustomScene(sceneIndex - baseLength);
-                        }}
-                        className="text-[10px] px-2 py-1 rounded-md border border-dashed border-red-400/60 text-red-400 hover:bg-red-500/10 transition-colors ml-2"
-                      >
-                        Remove scene
-                      </button>
+                      {allScenes.length > 1 && (
+                        <button
+                          onClick={() => {
+                            removeCustomScene(sceneIndex - baseScenes.length);
+                          }}
+                          className="text-[10px] px-2 py-1 rounded-md border border-dashed border-red-400/60 text-red-400 hover:bg-red-500/10 transition-colors ml-2"
+                        >
+                          Remove scene
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
@@ -1150,7 +1165,7 @@ function Editor() {
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   {allScenes.map((scene, i) => {
-                    const baseLength = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).length;
+                    const baseLength = baseScenes.length;
                     const isCustom = i >= baseLength;
                     const customIndex = i - baseLength;
 
@@ -1167,7 +1182,7 @@ function Editor() {
                           {i + 1}
                         </button>
 
-                        {isCustom && (
+                        {isCustom && allScenes.length > 1 && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
