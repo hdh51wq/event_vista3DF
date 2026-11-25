@@ -20,6 +20,10 @@ export interface IProject extends Document {
     width?: number;
     height?: number;
   }>;
+  /** True for projects created from a template: the editor shows only
+   *  customScenes (no event-type defaults), so the project has exactly
+   *  the template's scenes. */
+  customScenesOnly?: boolean;
   data?: any;
   items3D?: Record<string, any>;
   userId: mongoose.Types.ObjectId;
@@ -50,6 +54,7 @@ const ProjectSchema: Schema = new Schema(
         height: { type: Number },
       },
     ],
+    customScenesOnly: { type: Boolean, default: false },
     data:          { type: Schema.Types.Mixed },
     items3D:       { type: Object, default: {} },
     userId:        { type: Schema.Types.ObjectId, ref: 'User', required: true },
