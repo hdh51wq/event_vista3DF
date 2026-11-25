@@ -27,6 +27,37 @@ export interface MarzipanoView {
   ) => { yaw: number; pitch: number } | null;
 }
 
+/**
+ * Polyhaven panoramas are huge (Grand Hall is 8192x4096, ~6 MB; Dancing
+ * Hall is ~42 MB) and dl.polyhaven.org sends no CORS headers, so Marzipano
+ * loading them directly is both slow and broken (black view).
+ *
+ * Route those through Next.js' built-in image optimizer, which fetches and
+ * resizes server-side and serves the result same-origin:
+ *  - same-origin bytes, so no CORS problem for Marzipano;
+ *  - 8192px wide down to 3840px (the widest the optimizer allows by
+ *    default — w=4096 is rejected), ~6 MB down to under 1 MB;
+ *  - Vercel caches the optimized image, so repeat visits are fast.
+ * Everything else (Cloudinary, data URLs, relative paths) passes through
+ * untouched.
+ */
+function resolvePanoramaSrc(src: string): string {
+  try {
+    const host = new URL(src).hostname;
+    const isPolyhaven =
+      host === "dl.polyhaven.org" ||
+      host === "polyhaven.org" ||
+      host.endsWith(".polyhaven.org") ||
+      host.endsWith(".polyhaven.com");
+    if (isPolyhaven) {
+      return `/_next/image?url=${encodeURIComponent(src)}&w=3840&q=75`;
+    }
+  } catch {
+    // Relative URLs, data URLs, etc. — leave as-is.
+  }
+  return src;
+}
+
 interface PanoramaViewerProps {
   src: string;
   className?: string;
@@ -49,6 +80,14 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, PanoramaViewerProps>(
 
       let destroyed = false;
 
+      // Start downloading the panorama right away, in parallel with the
+      // Marzipano import below — previously the download only started
+      // after the import finished, and the viewer showed nothing until
+      // the whole file arrived. Marzipano reuses the cached image.
+      const resolvedSrc = resolvePanoramaSrc(src);
+      const preload = new Image();
+      preload.src = resolvedSrc;
+
       import("marzipano").then((Marzipano) => {
         if (destroyed || !containerRef.current) return;
 
@@ -63,8 +102,8 @@ const PanoramaViewer = forwardRef<PanoramaViewerHandle, PanoramaViewerProps>(
         });
         viewerRef.current = viewer;
 
-        const source = Marzipano.ImageUrlSource.fromString(src);
-        const geometry = new Marzipano.EquirectGeometry([{ width: 4096 }]);
+        const source = Marzipano.ImageUrlSource.fromString(resolvedSrc);
+        const geometry = new Marzipano.EquirectGeometry([{ width: 3840 }]);
 
         const limiter = Marzipano.RectilinearView.limit.vfov(
           (30 * Math.PI) / 180,
