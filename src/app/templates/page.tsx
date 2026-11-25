@@ -19,7 +19,9 @@ import { cn } from "@/lib/utils";
 // image optimizer so the card shows the actual scene photo, fast).
 const POLYHAVEN_BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
 const sceneThumb = (src: string) =>
-  `/_next/image?url=${encodeURIComponent(src)}&w=800&q=75`;
+  // w must be one of Next.js' allowed image widths (800 is rejected with
+  // 400); 1080 is the closest allowed size for the card.
+  `/_next/image?url=${encodeURIComponent(src)}&w=1080&q=75`;
 
 interface TemplateScene {
   label: string;
