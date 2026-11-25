@@ -1,32 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, MapPin, Users, DollarSign, Maximize2 } from "lucide-react";
-import { useAuth } from "@/lib/AuthContext";
-import { Venue, VENUES } from "@/lib/venues";
-import { cn } from "@/lib/utils";
-
-function venuesMatchingEventType(eventType: string) {
-  return VENUES.filter(
-    (v) =>
-      !v.eventTypes ||
-      v.eventTypes.length === 0 ||
-      (v.eventTypes as string[]).includes(eventType)
-  );
-}
-
-function fallbackVenuesForEvent(eventType: string): VenueWithAvailability[] {
-  return venuesMatchingEventType(eventType).map((v) => ({ ...v, available: true }));
-}
-
-export type VenueWithAvailability = Venue & { available: boolean; bookedBy?: string };
+import { X, Maximize2, DollarSign } from "lucide-react";
+import { sceneTemplatesFor, sceneThumb, type TemplateScene } from "@/lib/scenes";
 
 export interface VenueSelectorProps {
-  projectId: string;
   eventType: string;
   eventDate: string;
-  onVenueSelect: (venue: Venue) => void;
+  onSceneSelect: (scene: TemplateScene) => void;
   onSkip: () => void;
 }
 
@@ -37,63 +18,17 @@ function formatEventDate(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-function SkeletonCard() {
-  return (
-    <div className="glass-card overflow-hidden rounded-2xl animate-pulse">
-      <div className="aspect-[4/3] bg-zinc-200 dark:bg-zinc-700" />
-      <div className="p-5 space-y-3">
-        <div className="h-6 w-3/4 bg-zinc-200 dark:bg-zinc-700 rounded-lg" />
-        <div className="h-4 w-full bg-zinc-100 dark:bg-zinc-800 rounded" />
-        <div className="h-4 w-2/3 bg-zinc-100 dark:bg-zinc-800 rounded" />
-        <div className="h-9 w-full bg-zinc-100 dark:bg-zinc-800 rounded-xl mt-4" />
-      </div>
-    </div>
-  );
-}
-
+// Shown right after a project is created. Instead of a venue list, it
+// shows the scene templates of the project's event type — one card per
+// scene, with the scene's own photo and dimensions. Picking one makes it
+// the project's only scene (the same as using a template).
 export default function VenueSelector({
-  projectId,
   eventType,
   eventDate,
-  onVenueSelect,
+  onSceneSelect,
   onSkip,
 }: VenueSelectorProps) {
-  const { token } = useAuth();
-  const [venues, setVenues] = useState<VenueWithAvailability[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const dateParam = eventDate ? new Date(eventDate).toISOString().slice(0, 10) : "";
-
-  useEffect(() => {
-    if (!dateParam || !token) {
-      setVenues(fallbackVenuesForEvent(eventType));
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const qs = new URLSearchParams({
-      date: dateParam,
-      projectId,
-      eventType,
-    });
-    fetch(`/api/venues?${qs}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => {
-        if (!r.ok) throw new Error(r.status === 401 ? "Unauthorized" : "Failed to load venues");
-        return r.json();
-      })
-      .then((data) => {
-        setVenues(
-          data.venues?.length ? data.venues : fallbackVenuesForEvent(eventType)
-        );
-      })
-      .catch((err) => {
-        setError(err.message || "Something went wrong");
-        setVenues(fallbackVenuesForEvent(eventType));
-      })
-      .finally(() => setLoading(false));
-  }, [dateParam, projectId, token, eventType]);
+  const templates = sceneTemplatesFor(eventType);
 
   return (
     <AnimatePresence>
@@ -119,7 +54,8 @@ export default function VenueSelector({
                 Choose Your Venue
               </h2>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Select the room for your {eventType} on {formatEventDate(eventDate)}
+                Pick the 360° scene for your {eventType}
+                {eventDate ? ` on ${formatEventDate(eventDate)}` : ""} — each one is a single-scene template
               </p>
             </div>
             <button
@@ -132,96 +68,44 @@ export default function VenueSelector({
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
-            {error && (
-              <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm">
-                {error}
-              </div>
-            )}
-
-            {loading ? (
+            {templates.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <SkeletonCard key={i} />
-                ))}
-              </div>
-            ) : venues && venues.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {venues.map((v) => (
+                {templates.map((t) => (
                   <div
-                    key={v.id}
-                    className={cn(
-                      "glass-card overflow-hidden rounded-2xl flex flex-col transition-all",
-                      !v.available && "opacity-80"
-                    )}
+                    key={t.scene.label}
+                    className="glass-card overflow-hidden rounded-2xl flex flex-col transition-all"
                   >
                     <div className="aspect-[4/3] relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                       <img
-                        src={v.thumbnail}
-                        alt={v.name}
+                        src={sceneThumb(t.scene.src)}
+                        alt={t.scene.label}
                         className="object-cover w-full h-full"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?q=80&w=800&auto=format&fit=crop";
-                        }}
                       />
-                      <div className="absolute top-3 right-3">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold",
-                            v.available
-                              ? "bg-emerald-500/90 text-white"
-                              : "bg-red-500/90 text-white"
-                          )}
-                        >
-                          {v.available ? "✓ Available" : "✗ Booked on this date"}
+                      <div className="absolute top-3 left-3">
+                        <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-600 border border-white/50">
+                          {t.eventType}
                         </span>
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                        {v.name}
+                        {t.scene.label}
                       </h3>
-                      {v.eventTypes && v.eventTypes.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {v.eventTypes.map((et) => (
-                            <span
-                              key={et}
-                              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-200/50 dark:border-coral-800/50"
-                            >
-                              {et}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                       <div className="mt-2 space-y-1 text-sm text-zinc-500 dark:text-zinc-400">
                         <p className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 shrink-0" />
-                          {v.hotel}, {v.location}
-                        </p>
-                        <p className="flex items-center gap-2">
                           <Maximize2 className="w-3.5 h-3.5 shrink-0" />
-                          {v.dimensions}
-                        </p>
-                        <p className="flex items-center gap-2">
-                          <Users className="w-3.5 h-3.5 shrink-0" />
-                          Max {v.capacity} guests
+                          1 Scene · {t.scene.dimensions}
                         </p>
                         <p className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
                           <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                          €{v.pricePerDay.toLocaleString()} / day
+                          €{t.scene.rentPrice.toLocaleString()} / day
                         </p>
                       </div>
                       <button
-                        onClick={() => v.available && onVenueSelect(v)}
-                        disabled={!v.available}
-                        className={cn(
-                          "mt-4 w-full py-3 rounded-xl font-semibold text-sm transition-all",
-                          v.available
-                            ? "btn-primary shadow-md hover:shadow-lg"
-                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500 cursor-not-allowed"
-                        )}
+                        onClick={() => onSceneSelect(t.scene)}
+                        className="mt-4 w-full py-3 rounded-xl font-semibold text-sm transition-all btn-primary shadow-md hover:shadow-lg"
                       >
-                        Select Venue
+                        Select Scene
                       </button>
                     </div>
                   </div>
@@ -229,7 +113,7 @@ export default function VenueSelector({
               </div>
             ) : (
               <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">
-                No venues to display.
+                No scenes to display for this event type.
               </p>
             )}
           </div>
