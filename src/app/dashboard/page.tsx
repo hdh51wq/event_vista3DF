@@ -15,7 +15,7 @@ import { useAuth, Project } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import VenueSelector from "@/components/VenueSelector";
-import type { Venue } from "@/lib/venues";
+import { sceneThumb, type TemplateScene } from "@/lib/scenes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -625,11 +625,18 @@ export default function DashboardPage() {
     }
   };
 
-  const handleVenueSelect = async (venue: Venue) => {
+  const handleSceneSelect = async (scene: TemplateScene) => {
     if (!venueSelectorProject) return;
     try {
-      await updateProject(venueSelectorProject.id, { venueId: venue.id });
-      toast.success("Venue selected");
+      // The chosen scene becomes the project's only scene, exactly like
+      // using a template from the Templates page.
+      await updateProject(venueSelectorProject.id, {
+        customScenes: [{ name: scene.label, src: scene.src, width: 4096, height: 2048 }],
+        customScenesOnly: true,
+        sceneCount: 1,
+        thumbnail: sceneThumb(scene.src),
+      });
+      toast.success("Scene selected");
       setVenueSelectorProject(null);
       router.push(`/editor?id=${venueSelectorProject.id}`);
     } catch (err: any) {
@@ -649,10 +656,9 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto px-6 py-10 space-y-8">
       {venueSelectorProject && (
         <VenueSelector
-          projectId={venueSelectorProject.id}
           eventType={venueSelectorProject.eventType}
           eventDate={venueSelectorProject.eventDate}
-          onVenueSelect={handleVenueSelect}
+          onSceneSelect={handleSceneSelect}
           onSkip={handleVenueSkip}
         />
       )}
