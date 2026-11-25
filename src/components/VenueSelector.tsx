@@ -1,14 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Maximize2, DollarSign } from "lucide-react";
+import { Maximize2, DollarSign } from "lucide-react";
 import { sceneTemplatesFor, sceneThumb, type TemplateScene } from "@/lib/scenes";
 
 export interface VenueSelectorProps {
   eventType: string;
   eventDate: string;
   onSceneSelect: (scene: TemplateScene) => void;
-  onSkip: () => void;
 }
 
 function formatEventDate(dateStr: string): string {
@@ -21,12 +20,12 @@ function formatEventDate(dateStr: string): string {
 // Shown right after a project is created. Instead of a venue list, it
 // shows the scene templates of the project's event type — one card per
 // scene, with the scene's own photo and dimensions. Picking one makes it
-// the project's only scene (the same as using a template).
+// the project's only scene (the same as using a template). There is no
+// Skip: the user must choose a scene to continue.
 export default function VenueSelector({
   eventType,
   eventDate,
   onSceneSelect,
-  onSkip,
 }: VenueSelectorProps) {
   const templates = sceneTemplatesFor(eventType);
 
@@ -37,7 +36,6 @@ export default function VenueSelector({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-        onClick={(e) => e.target === e.currentTarget && onSkip()}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -58,12 +56,6 @@ export default function VenueSelector({
                 {eventDate ? ` on ${formatEventDate(eventDate)}` : ""} — each one is a single-scene template
               </p>
             </div>
-            <button
-              onClick={onSkip}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              <X className="w-4 h-4" /> Skip
-            </button>
           </div>
 
           {/* Content */}
