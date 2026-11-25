@@ -12,6 +12,16 @@ export interface FurnitureItem {
   price?: number;
 }
 
+/**
+ * Furniture sprites are mostly transparent padding — the plant drawing is
+ * only ~28% of its image width, the lamp ~22% — so the old defaults
+ * (60–160 px) rendered as 20 px specks on a 1900 px panorama, invisible
+ * against the decor. Defaults below are scaled x3 so placed furniture
+ * actually reads as furniture. Stored items placed at the old size are
+ * scaled up on load in the editor (see restoreData) when untouched.
+ */
+export const FURNITURE_SIZE_SCALE = 3;
+
 /** Static fallback catalogue (used when API / MongoDB is unavailable). */
 export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
   {
@@ -23,8 +33,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/chairleft.png",
       right: "/furniture/chairright.png",
     },
-    defaultWidth: 90,
-    defaultHeight: 110,
+    defaultWidth: 270,
+    defaultHeight: 330,
     price: 75,
   },
   {
@@ -36,8 +46,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/sofaleft.png",
       right: "/furniture/sofaright.png",
     },
-    defaultWidth: 160,
-    defaultHeight: 100,
+    defaultWidth: 480,
+    defaultHeight: 300,
     price: 450,
   },
   {
@@ -49,8 +59,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/table_left.svg",
       right: "/furniture/table_right.svg",
     },
-    defaultWidth: 140,
-    defaultHeight: 100,
+    defaultWidth: 420,
+    defaultHeight: 300,
     price: 220,
   },
   {
@@ -62,8 +72,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/lamp.png",
       right: "/furniture/lamp.png",
     },
-    defaultWidth: 60,
-    defaultHeight: 160,
+    defaultWidth: 180,
+    defaultHeight: 480,
     price: 120,
   },
   {
@@ -75,8 +85,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/plant.png",
       right: "/furniture/plant.png",
     },
-    defaultWidth: 80,
-    defaultHeight: 130,
+    defaultWidth: 240,
+    defaultHeight: 390,
     price: 45,
   },
   {
@@ -88,8 +98,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/coffee-table_left.png",
       right: "/furniture/coffee-table_left.png",
     },
-    defaultWidth: 130,
-    defaultHeight: 80,
+    defaultWidth: 390,
+    defaultHeight: 240,
     price: 180,
   },
   {
@@ -101,8 +111,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/bookshelf_left.png",
       right: "/furniture/bookshelf_right.png",
     },
-    defaultWidth: 110,
-    defaultHeight: 160,
+    defaultWidth: 330,
+    defaultHeight: 480,
     price: 250,
   },
   {
@@ -114,8 +124,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/flower-vase.png",
       right: "/furniture/flower-vase.png",
     },
-    defaultWidth: 70,
-    defaultHeight: 130,
+    defaultWidth: 210,
+    defaultHeight: 390,
     price: 35,
   },
   {
@@ -127,8 +137,8 @@ export const FALLBACK_FURNITURE_ITEMS: FurnitureItem[] = [
       left: "/furniture/dining-table.png",
       right: "/furniture/dining-table_left.png",
     },
-    defaultWidth: 160,
-    defaultHeight: 110,
+    defaultWidth: 480,
+    defaultHeight: 330,
     price: 550,
   },
 ];
