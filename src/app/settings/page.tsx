@@ -23,6 +23,7 @@ import AdminSettingsPanel, { type AdminSettingsTab } from "@/components/AdminSet
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type SettingsSection =
   | "profile"
@@ -96,6 +97,7 @@ function Toast({ message, type }: { message: string; type: "success" | "error" }
 
 export default function SettingsPage() {
   const { user, token, saveProfile, deleteAccount, logout, isLoggedIn, loading, removeCustomFurniture } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const isAdmin = user?.role === "admin";
   const [section, setSection] = useState<SettingsSection>("profile");
@@ -196,9 +198,9 @@ export default function SettingsPage() {
     setProfileSaving(true);
     try {
       await saveProfile({ name, email, agencyName, phone, address });
-      showToast("Profile saved successfully!", "success");
+      showToast(t("settings.profileSaved"), "success");
     } catch (err: any) {
-      showToast(err.message || "Failed to save profile", "error");
+      showToast(err.message || t("settings.failedSaveProfile"), "error");
     } finally {
       setProfileSaving(false);
     }
@@ -206,15 +208,15 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showToast("Please fill in all password fields", "error");
+      showToast(t("settings.fillAllPasswordFields"), "error");
       return;
     }
     if (newPassword !== confirmPassword) {
-      showToast("New passwords do not match", "error");
+      showToast(t("settings.passwordsDoNotMatch"), "error");
       return;
     }
     if (newPassword.length < 6) {
-      showToast("Password must be at least 6 characters", "error");
+      showToast(t("settings.passwordMinLength"), "error");
       return;
     }
     setPasswordSaving(true);
@@ -223,9 +225,9 @@ export default function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showToast("Password updated successfully!", "success");
+      showToast(t("settings.passwordUpdated"), "success");
     } catch (err: any) {
-      showToast(err.message || "Failed to update password", "error");
+      showToast(err.message || t("settings.failedUpdatePassword"), "error");
     } finally {
       setPasswordSaving(false);
     }
@@ -236,7 +238,7 @@ export default function SettingsPage() {
     try {
       await deleteAccount(deletePassword);
     } catch (err: any) {
-      showToast(err.message || "Failed to delete account", "error");
+      showToast(err.message || t("settings.failedDeleteAccount"), "error");
       setDeleting(false);
     }
   };
@@ -244,7 +246,7 @@ export default function SettingsPage() {
   const handleRemoveCustomFurniture = async (itemId: string) => {
     if (
       !confirm(
-        "Remove this custom furniture? It will be deleted from your library permanently."
+        t("settings.confirmRemoveFurniture")
       )
     ) {
       return;
@@ -252,13 +254,13 @@ export default function SettingsPage() {
     try {
       const ok = await removeCustomFurniture(itemId);
       if (ok) {
-        showToast("Custom furniture removed", "success");
+        showToast(t("settings.furnitureRemoved"), "success");
       } else {
-        showToast("Failed to remove furniture. Please try again.", "error");
+        showToast(t("settings.failedRemoveFurniture"), "error");
       }
     } catch (err) {
       console.error("Remove furniture error:", err);
-      showToast("Failed to remove furniture. Please try again.", "error");
+      showToast(t("settings.failedRemoveFurniture"), "error");
     }
   };
 
@@ -294,16 +296,16 @@ export default function SettingsPage() {
                   <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-lg">Delete Account</h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">This action cannot be undone</p>
+                  <h3 className="font-bold text-zinc-900 dark:text-zinc-100 text-lg">{t("settings.deleteAccount")}</h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("settings.actionCannotBeUndone")}</p>
                 </div>
               </div>
               <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-                All your projects, clients, and data will be permanently deleted. Enter your password to confirm.
+                {t("settings.deleteAccountWarning")}
               </p>
               <div className="space-y-2 mb-6">
                 <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
-                  Confirm Password
+                  {t("settings.confirmPassword")}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
@@ -311,7 +313,7 @@ export default function SettingsPage() {
                     type={showDeletePassword ? "text" : "password"}
                     value={deletePassword}
                     onChange={(e) => setDeletePassword(e.target.value)}
-                    placeholder="Enter your password"
+                    placeholder={t("settings.enterYourPassword")}
                     className="w-full pl-11 pr-12 py-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-red-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                   />
                   <button
@@ -328,7 +330,7 @@ export default function SettingsPage() {
                   onClick={() => { setShowDeleteModal(false); setDeletePassword(""); }}
                   className="flex-1 py-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-sm"
                 >
-                  Cancel
+                  {t("settings.cancel")}
                 </button>
                 <button
                   onClick={handleDeleteAccount}
@@ -340,7 +342,7 @@ export default function SettingsPage() {
                   ) : (
                     <Trash2 className="w-4 h-4" />
                   )}
-                  {deleting ? "Deleting…" : "Delete Account"}
+                  {deleting ? t("settings.deleting") : t("settings.deleteAccount")}
                 </button>
               </div>
             </motion.div>
@@ -354,31 +356,31 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-10"
         >
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">Settings</h1>
+          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 mb-2 tracking-tight">{t("settings.title")}</h1>
           <p className="text-zinc-500 dark:text-zinc-400">
-            Manage your profile, security{isAdmin ? ", and platform admin tools" : ""}.
+            {t("settings.subtitle")}{isAdmin ? t("settings.subtitleAdminSuffix") : ""}.
           </p>
         </motion.header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <aside className="lg:col-span-3 space-y-2">
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1 mb-1">Account</p>
-            <NavBtn id="profile" label="Profile" icon={User} />
-            <NavBtn id="security" label="Security" icon={Lock} />
-            <NavBtn id="danger" label="Danger zone" icon={AlertTriangle} />
+            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1 mb-1">{t("settings.account")}</p>
+            <NavBtn id="profile" label={t("settings.profile")} icon={User} />
+            <NavBtn id="security" label={t("settings.security")} icon={Lock} />
+            <NavBtn id="danger" label={t("settings.dangerZone")} icon={AlertTriangle} />
             {isAdmin && (
               <>
                 <div className="pt-4 pb-1">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">Admin</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-1">{t("settings.admin")}</p>
                 </div>
-                <NavBtn id="admin-overview" label="Overview" icon={BarChart3} />
-                <NavBtn id="admin-users" label="Users" icon={Users} />
-                <NavBtn id="admin-scenes" label="Scenes" icon={Building2} />
-                <NavBtn id="admin-furniture" label="Furniture" icon={Armchair} />
+                <NavBtn id="admin-overview" label={t("settings.overview")} icon={BarChart3} />
+                <NavBtn id="admin-users" label={t("settings.users")} icon={Users} />
+                <NavBtn id="admin-scenes" label={t("settings.scenes")} icon={Building2} />
+                <NavBtn id="admin-furniture" label={t("settings.furniture")} icon={Armchair} />
               </>
             )}
             <div className="glass-card p-5 rounded-2xl mt-6 space-y-3">
-              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 text-sm">Logged in as</h3>
+              <h3 className="font-bold text-zinc-800 dark:text-zinc-100 text-sm">{t("settings.loggedInAs")}</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">{user?.email}</p>
               <button
                 type="button"
@@ -386,7 +388,7 @@ export default function SettingsPage() {
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-2xl font-semibold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all text-xs"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                Logout
+                {t("settings.logout")}
               </button>
             </div>
           </aside>
@@ -404,17 +406,17 @@ export default function SettingsPage() {
             >
               <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
                 <User className="w-5 h-5 text-coral-500" />
-                Profile
+                {t("settings.profile")}
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Name" icon={User} value={name} onChange={setName} placeholder="Your full name" />
-                <InputField label="Email" icon={Mail} type="email" value={email} onChange={setEmail} placeholder="you@agency.com" />
-                <InputField label="Phone" icon={Phone} type="tel" value={phone} onChange={setPhone} placeholder="+1 (555) 000-0000" />
-                <InputField label="Agency Name" icon={Building2} value={agencyName} onChange={setAgencyName} placeholder="My Agency" />
+                <InputField label={t("settings.name")} icon={User} value={name} onChange={setName} placeholder={t("settings.yourFullName")} />
+                <InputField label={t("settings.email")} icon={Mail} type="email" value={email} onChange={setEmail} placeholder="you@agency.com" />
+                <InputField label={t("settings.phone")} icon={Phone} type="tel" value={phone} onChange={setPhone} placeholder="+1 (555) 000-0000" />
+                <InputField label={t("settings.agencyName")} icon={Building2} value={agencyName} onChange={setAgencyName} placeholder={t("settings.myAgency")} />
               </div>
 
-              <InputField label="Address" icon={MapPin} value={address} onChange={setAddress} placeholder="123 Main St, City, Country" />
+              <InputField label={t("settings.address")} icon={MapPin} value={address} onChange={setAddress} placeholder="123 Main St, City, Country" />
 
               <div className="flex justify-end pt-2">
                 <button
@@ -427,14 +429,14 @@ export default function SettingsPage() {
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  {profileSaving ? "Saving…" : "Save Profile"}
+                  {profileSaving ? t("settings.saving") : t("settings.saveProfile")}
                 </button>
               </div>
 
               <div className="border-t border-zinc-100 dark:border-zinc-800 pt-6 space-y-4">
                 <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
                   <Armchair className="w-4 h-4 text-coral-500" />
-                  My Custom Furniture
+                  {t("settings.myCustomFurniture")}
                 </h3>
                 {(user?.customFurniture?.length ?? 0) > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -447,7 +449,7 @@ export default function SettingsPage() {
                           type="button"
                           onClick={() => handleRemoveCustomFurniture(item.id)}
                           className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
-                          title="Remove this furniture"
+                          title={t("settings.removeThisFurniture")}
                         >
                           ✕
                         </button>
@@ -465,7 +467,7 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                    No custom furniture yet. Upload items from the editor furniture panel.
+                    {t("settings.noCustomFurniture")}
                   </p>
                 )}
               </div>
@@ -481,35 +483,35 @@ export default function SettingsPage() {
             >
               <h2 className="text-xl font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
                 <Lock className="w-5 h-5 text-coral-500" />
-                Change Password
+                {t("settings.changePassword")}
               </h2>
 
               <div className="space-y-4">
                 <InputField
-                  label="Current Password"
+                  label={t("settings.currentPassword")}
                   icon={Lock}
                   type={showCurrent ? "text" : "password"}
                   value={currentPassword}
                   onChange={setCurrentPassword}
-                  placeholder="Enter current password"
+                  placeholder={t("settings.enterCurrentPassword")}
                   rightElement={eyeBtn(showCurrent, () => setShowCurrent(!showCurrent))}
                 />
                 <InputField
-                  label="New Password"
+                  label={t("settings.newPassword")}
                   icon={Lock}
                   type={showNew ? "text" : "password"}
                   value={newPassword}
                   onChange={setNewPassword}
-                  placeholder="At least 6 characters"
+                  placeholder={t("settings.atLeast6Chars")}
                   rightElement={eyeBtn(showNew, () => setShowNew(!showNew))}
                 />
                 <InputField
-                  label="Confirm New Password"
+                  label={t("settings.confirmNewPassword")}
                   icon={Lock}
                   type={showConfirm ? "text" : "password"}
                   value={confirmPassword}
                   onChange={setConfirmPassword}
-                  placeholder="Repeat new password"
+                  placeholder={t("settings.repeatNewPassword")}
                   rightElement={eyeBtn(showConfirm, () => setShowConfirm(!showConfirm))}
                 />
               </div>
@@ -525,7 +527,7 @@ export default function SettingsPage() {
                   ) : (
                     <Lock className="w-4 h-4" />
                   )}
-                  {passwordSaving ? "Updating…" : "Update Password"}
+                  {passwordSaving ? t("settings.updating") : t("settings.updatePassword")}
                 </button>
               </div>
             </motion.div>
@@ -540,17 +542,17 @@ export default function SettingsPage() {
             >
               <h2 className="text-xl font-bold text-red-700 flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5" />
-                Danger Zone
+                {t("settings.dangerZone")}
               </h2>
               <p className="text-sm text-red-600/80">
-                Once you delete your account, all data will be permanently removed and cannot be recovered.
+                {t("settings.dangerZoneWarning")}
               </p>
               <button
                 onClick={() => setShowDeleteModal(true)}
                 className="flex items-center gap-2 px-5 py-3 bg-red-600 text-white rounded-2xl font-semibold hover:bg-red-700 active:scale-95 transition-all text-sm shadow-md shadow-red-200"
               >
                 <Trash2 className="w-4 h-4" />
-                Delete Account
+                {t("settings.deleteAccount")}
               </button>
             </motion.div>
             )}
