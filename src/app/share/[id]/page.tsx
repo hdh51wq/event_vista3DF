@@ -24,6 +24,7 @@ import dynamic from "next/dynamic";
 import SceneOverlay, { PlacedItem } from "@/components/SceneOverlay";
 import { PanoramaViewerHandle } from "@/components/PanoramaViewer";
 import { FURNITURE_ITEMS } from "@/lib/furniture";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const PanoramaViewer = dynamic(() => import("@/components/PanoramaViewer"), {
   ssr: false,
@@ -64,6 +65,7 @@ const EVENT_SCENES: Record<string, { label: string; src: string; dimensions: str
 };
 
 export default function SharePage({ params }: { params: Promise<{ id: string }> }) {
+  const { t } = useLanguage();
   const { id } = use(params);
   const panoramaRef = useRef<PanoramaViewerHandle | null>(null);
 
@@ -123,7 +125,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
       <div className="h-screen w-full flex items-center justify-center bg-zinc-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-coral-200 border-t-coral-500 rounded-full animate-spin" />
-          <p className="text-zinc-400 font-medium">Loading presentation...</p>
+          <p className="text-zinc-400 font-medium">{t("share.loading")}</p>
         </div>
       </div>
     );
@@ -133,8 +135,8 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
     return (
       <div className="h-screen w-full flex items-center justify-center bg-zinc-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Presentation not found</h1>
-          <p className="text-zinc-500">The link might have expired or is incorrect.</p>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">{t("share.notFoundTitle")}</h1>
+          <p className="text-zinc-500">{t("share.notFoundText")}</p>
         </div>
       </div>
     );
@@ -153,7 +155,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
         
         {/* Brand Watermark */}
         <div className="absolute bottom-6 right-8 z-10 opacity-40 hover:opacity-100 transition-opacity flex items-center gap-2">
-          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Powered by</p>
+          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{t("share.poweredBy")}</p>
           <span className="text-sm font-black text-zinc-900 tracking-tighter">EventVista</span>
         </div>
       </div>
@@ -168,16 +170,16 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
           >
             <div className="flex items-center gap-2 mb-3">
               <span className="px-2.5 py-1 bg-coral-100 text-coral-600 text-[10px] font-bold uppercase tracking-wider rounded-lg">
-                Exclusive Preview
+                {t("share.exclusivePreview")}
               </span>
               <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
-                Interactive Proposal
+                {t("share.interactiveProposal")}
               </span>
             </div>
             <h1 className="text-2xl font-extrabold text-zinc-900 leading-tight mb-1">{project.name}</h1>
             <p className="text-sm text-zinc-500 font-medium mb-4 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" />
-              {project.location || "Location not specified"}
+              {project.location || t("share.locationNotSpecified")}
             </p>
             
             <div className="flex items-center gap-3 pt-4 border-t border-zinc-100">
@@ -190,7 +192,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                 }`}
               >
                 {showReport ? <X className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                {showReport ? "CLOSE REPORT" : "VIEW FULL PROPOSAL"}
+                {showReport ? t("share.closeReport") : t("share.viewProposal")}
               </button>
             </div>
           </motion.div>
@@ -203,10 +205,10 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
           >
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-coral-500" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Designed By</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">{t("share.designedBy")}</p>
             </div>
             <h2 className="text-lg font-bold mb-3">{AGENCY_INFO.name}</h2>
-            <p className="text-[10px] text-white/50 leading-relaxed font-medium">Professional Event Scenography & 3D Visualization Specialists.</p>
+            <p className="text-[10px] text-white/50 leading-relaxed font-medium">{t("share.agencyTagline")}</p>
           </motion.div>
         </div>
       </div>
@@ -224,8 +226,8 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
             <div className="p-10">
               <div className="flex items-center justify-between mb-12">
                 <div>
-                  <p className="text-[10px] text-coral-500 font-black uppercase tracking-[0.2em] mb-2">Technical Proposal</p>
-                  <h2 className="text-3xl font-black text-zinc-900 tracking-tight">Project Details & Quotation</h2>
+                  <p className="text-[10px] text-coral-500 font-black uppercase tracking-[0.2em] mb-2">{t("share.technicalProposal")}</p>
+                  <h2 className="text-3xl font-black text-zinc-900 tracking-tight">{t("share.detailsTitle")}</h2>
                 </div>
                 <button 
                   onClick={() => setShowReport(false)}
@@ -238,20 +240,20 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               {/* 1. Project Overview */}
               <section className="mb-12">
                 <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Info className="w-4 h-4" /> 1. Project Overview
+                  <Info className="w-4 h-4" /> 1. {t("share.overview")}
                 </h3>
                 <div className="bg-zinc-50 rounded-2xl p-6 border border-zinc-100">
                   <p className="text-zinc-600 leading-relaxed mb-6">
-                    This comprehensive proposal details the creative vision and technical execution for <span className="font-bold text-zinc-900">{project.name}</span>. 
-                    Our focus is to deliver an immersive {project.eventType.toLowerCase()} experience that merges high-end furniture curation with strategic spatial planning.
+                    {t("share.overviewTextPart1")} <span className="font-bold text-zinc-900">{project.name}</span>.{" "}
+                    {t("share.overviewTextPart2")} {project.eventType.toLowerCase()} {t("share.overviewTextPart3")}
                   </p>
                   <div className="grid grid-cols-2 gap-8">
                     <div>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">Client</p>
-                      <p className="font-bold text-zinc-800">{project.client || "Valued Client"}</p>
+                      <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">{t("share.client")}</p>
+                      <p className="font-bold text-zinc-800">{project.client || t("share.valuedClient")}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">Event Type</p>
+                      <p className="text-[10px] text-zinc-400 font-bold uppercase mb-1">{t("share.eventType")}</p>
                       <p className="font-bold text-zinc-800">{project.eventType}</p>
                     </div>
                   </div>
@@ -261,7 +263,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               {/* 2. Technical Specs */}
               <section className="mb-12">
                 <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Maximize2 className="w-4 h-4" /> 2. Venue Technical Specs
+                  <Maximize2 className="w-4 h-4" /> 2. {t("share.venueSpecs")}
                 </h3>
                 <div className="space-y-3">
                   {scenes.map((s, i) => (
@@ -272,7 +274,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
                         </div>
                         <div>
                           <p className="font-bold text-zinc-900 text-sm">{s.label}</p>
-                          <p className="text-[10px] text-zinc-400 font-medium uppercase">{s.dimensions} • Setup: {s.setup}</p>
+                          <p className="text-[10px] text-zinc-400 font-medium uppercase">{s.dimensions} • {t("share.setup")}: {s.setup}</p>
                         </div>
                       </div>
                       <p className="font-bold text-zinc-700 text-sm">${s.rent.toLocaleString()}</p>
@@ -284,16 +286,16 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               {/* 3. Inventory */}
               <section className="mb-12">
                 <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Sofa className="w-4 h-4" /> 3. Furniture Inventory
+                  <Sofa className="w-4 h-4" /> 3. {t("share.furnitureInventory")}
                 </h3>
                 <div className="border border-zinc-100 rounded-2xl overflow-hidden">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-zinc-50 border-b border-zinc-100">
                       <tr>
-                        <th className="px-4 py-3 font-bold text-zinc-500">Item</th>
-                        <th className="px-4 py-3 font-bold text-zinc-500 text-center">Qty</th>
-                        <th className="px-4 py-3 font-bold text-zinc-500 text-right">Unit</th>
-                        <th className="px-4 py-3 font-bold text-zinc-500 text-right">Total</th>
+                        <th className="px-4 py-3 font-bold text-zinc-500">{t("share.tableItem")}</th>
+                        <th className="px-4 py-3 font-bold text-zinc-500 text-center">{t("share.tableQty")}</th>
+                        <th className="px-4 py-3 font-bold text-zinc-500 text-right">{t("share.tableUnit")}</th>
+                        <th className="px-4 py-3 font-bold text-zinc-500 text-right">{t("share.tableTotal")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-50">
@@ -313,27 +315,27 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               {/* 4. Budget */}
               <section className="mb-12">
                 <h3 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4" /> 4. Budget Summary
+                  <DollarSign className="w-4 h-4" /> 4. {t("share.budgetSummary")}
                 </h3>
                 <div className="space-y-4 p-6 bg-coral-50/30 border border-coral-100 rounded-2xl">
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500 font-medium">Furniture & Elements</span>
+                    <span className="text-zinc-500 font-medium">{t("share.budgetFurniture")}</span>
                     <span className="font-bold text-zinc-900">${totalFurniture.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500 font-medium">Venue Total Rent</span>
+                    <span className="text-zinc-500 font-medium">{t("share.budgetVenueRent")}</span>
                     <span className="font-bold text-zinc-900">${totalVenue.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500 font-medium">Logistics & Installation (15%)</span>
+                    <span className="text-zinc-500 font-medium">{t("share.budgetLogistics")}</span>
                     <span className="font-bold text-zinc-900">${(totalFurniture * 0.15).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-zinc-500 font-medium">Agency Professional Fee</span>
+                    <span className="text-zinc-500 font-medium">{t("share.budgetAgencyFee")}</span>
                     <span className="font-bold text-zinc-900">$2,500</span>
                   </div>
                   <div className="pt-4 border-t border-coral-100 flex justify-between">
-                    <span className="font-black text-coral-600 uppercase tracking-widest text-xs self-center">Investment Total</span>
+                    <span className="font-black text-coral-600 uppercase tracking-widest text-xs self-center">{t("share.investmentTotal")}</span>
                     <span className="text-2xl font-black text-zinc-900">${finalInvestment.toLocaleString()}</span>
                   </div>
                 </div>
@@ -342,7 +344,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               {/* 5. Footer */}
               <section className="pt-8 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400 font-bold uppercase tracking-widest">
                 <div className="flex items-center gap-4">
-                  <span className="flex items-center gap-1"><FileCheck className="w-3 h-3 text-green-500" /> PROPOSAL VALID FOR 30 DAYS</span>
+                  <span className="flex items-center gap-1"><FileCheck className="w-3 h-3 text-green-500" /> {t("share.validFor30Days")}</span>
                 </div>
                 <p>© 2026 EVENTVISTA • {AGENCY_INFO.website}</p>
               </section>
@@ -373,7 +375,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
               <div className="flex items-center gap-1">
                 <span className="animate-pulse">↔️</span>
               </div>
-              <span>Click and drag to explore the 360° space</span>
+              <span>{t("share.dragHint")}</span>
             </motion.div>
           </div>
 
@@ -386,7 +388,7 @@ export default function SharePage({ params }: { params: Promise<{ id: string }> 
             >
               <div className="flex items-center gap-1">
                 <Layout className="w-3.5 h-3.5 text-coral-500" />
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1 mr-3">Scenes</span>
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1 mr-3">{t("share.scenes")}</span>
               </div>
               <div className="flex items-center gap-3">
                 {scenes.map((scene, i) => (
