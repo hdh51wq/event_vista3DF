@@ -26,6 +26,7 @@ import LogoIntegration from "@/components/LogoIntegration";
 import SceneImportModal from "@/components/SceneImportModal";
 import { VENUES } from "@/lib/venues";
 import { copyTextToClipboard } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const BASE = "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG";
 
@@ -65,19 +66,18 @@ const EVENT_SCENES: Record<string, Scene[]> = {
   ],
 };
 
-const EVENT_LABELS: Record<string, string> = {
-  Wedding:       "Wedding Venue",
-  Conference:    "Conference Hall",
-  "Gala Dinner": "Gala Dinner Hall",
-};
+function PanoramaLoading() {
+  const { t } = useLanguage();
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-zinc-900">
+      <div className="text-white/60 text-sm font-medium animate-pulse">{t("editor.loadingScene")}</div>
+    </div>
+  );
+}
 
 const PanoramaViewer = dynamic(() => import("@/components/PanoramaViewer"), {
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-zinc-900">
-      <div className="text-white/60 text-sm font-medium animate-pulse">Loading 360° scene…</div>
-    </div>
-  ),
+  loading: PanoramaLoading,
 });
 
 const ThreeOverlay = dynamic(() => import("@/components/ThreeOverlay"), {
@@ -88,6 +88,7 @@ let uidCounter = 0;
 function nextUid() { return `item-${++uidCounter}`; }
 
 function Editor() {
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get("id");
@@ -96,7 +97,7 @@ function Editor() {
   const panoramaRef = useRef<PanoramaViewerHandle | null>(null);
   const [marzipanoViewer, setMarzipanoViewer] = useState<unknown>(null);
 
-  const [projectName, setProjectName] = useState("Untitled Project");
+  const [projectName, setProjectName] = useState(t("editor.untitledProject"));
   const [eventType, setEventType] = useState("Wedding");
   const [sceneIndex, setSceneIndex] = useState(0);
   const [venueId, setVenueId] = useState<string | null>(null);
@@ -116,6 +117,14 @@ function Editor() {
   /** Template projects show only their own scene(s), no event-type defaults. */
   const [customScenesOnly, setCustomScenesOnly] = useState(false);
   const [furnitureCatalog, setFurnitureCatalog] = useState<FurnitureItem[]>(FALLBACK_FURNITURE_ITEMS);
+  const eventLabel =
+    eventType === "Wedding"
+      ? t("editor.eventWeddingVenue")
+      : eventType === "Conference"
+      ? t("editor.eventConferenceHall")
+      : eventType === "Gala Dinner"
+      ? t("editor.eventGalaDinnerHall")
+      : eventType;
 
 
   const sceneKey = `${eventType}::${sceneIndex}`;
@@ -230,7 +239,7 @@ function Editor() {
       await exportProjectToPdf({
         projectId: projectId || "unknown",
         projectName,
-        clientName: project?.client || "Valued Client",
+        clientName: project?.client || t("editor.valuedClient"),
         agencyName: user?.agencyName || "EventVista Agency",
         eventType,
         furnitureCatalog,
@@ -241,7 +250,7 @@ function Editor() {
     } finally {
       setIsExportingPdf(false);
     }
-  }, [eventType, placedItemsMap, projectName, projectId, projects, user, furnitureCatalog]);
+  }, [eventType, placedItemsMap, projectName, projectId, projects, user, furnitureCatalog, t]);
 
 
   const handleAddFurniture = useCallback(
@@ -417,10 +426,10 @@ function Editor() {
   <div id="loading">
     <div id="loader-box">
       <div class="loader"></div>
-      <div style="font-size: 14px; font-weight: 500; opacity: 0.7;">Decoding 360° Environment...</div>
+      <div style="font-size: 14px; font-weight: 500; opacity: 0.7;">${t("editor.exportDecoding")}</div>
     </div>
     <div id="error-box" style="display: none; color: #ff4a4a; max-width: 400px;">
-      <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Export Error</div>
+      <div style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">${t("editor.exportError")}</div>
       <div id="error-msg" style="font-size: 13px; opacity: 0.8; line-height: 1.5;"></div>
     </div>
   </div>
@@ -429,9 +438,9 @@ function Editor() {
   <div class="brand">EventVista</div>
   
   <div id="ui">
-    <div class="badge">Interactive Scene</div>
+    <div class="badge">${t("editor.interactiveScene")}</div>
     <div style="font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 2px;">${projectName}</div>
-    <div style="font-size: 13px; opacity: 0.7; font-weight: 500;">${EVENT_LABELS[eventType] || eventType} • ${currentScene.label}</div>
+    <div style="font-size: 13px; opacity: 0.7; font-weight: 500;">${eventLabel} • ${currentScene.label}</div>
   </div>
 
   <script>
@@ -491,17 +500,17 @@ function Editor() {
           loading.style.opacity = '0';
           setTimeout(() => loading.style.display = 'none', 500);
         } catch (e) {
-          showError("Marzipano Scene Error: " + e.message);
+          showError(${JSON.stringify(t("editor.exportSceneError"))} + e.message);
         }
       };
       img.onerror = function() {
-        showError("Failed to decode the 360° image. The image might be too large or corrupted.");
+        showError(${JSON.stringify(t("editor.exportDecodeFailed"))});
       };
       
       // Assign the source - this triggers decoding
       img.src = "${sceneBase64}";
     } catch (e) {
-      showError("Viewer Initialization Error: " + e.message);
+      showError(${JSON.stringify(t("editor.exportViewerError"))} + e.message);
     }
   </script>
 </body>
@@ -521,7 +530,7 @@ function Editor() {
     } finally {
       setIsExporting(false);
     }
-  }, [eventType, sceneIndex, placedItemsMap, projectName]);
+  }, [eventType, sceneIndex, placedItemsMap, projectName, eventLabel, t]);
 
   const handleShare = useCallback(async () => {
     if (!projectId) return;
@@ -531,9 +540,9 @@ function Editor() {
       setIsSharing(true);
       setTimeout(() => setIsSharing(false), 2000);
     } else {
-      window.prompt("Copy this share link:", shareUrl);
+      window.prompt(t("editor.copyShareLink"), shareUrl);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const defaultScenes: Scene[] = (EVENT_SCENES[eventType] ?? EVENT_SCENES["Wedding"]).map(
     (s) => ({ ...s, isCustom: false })
@@ -632,7 +641,7 @@ function Editor() {
       customScenes?: Array<{ name: string; src: string; width?: number; height?: number }>;
       customScenesOnly?: boolean;
     }) => {
-      setProjectName(data.name ?? "Untitled Project");
+      setProjectName(data.name ?? t("editor.untitledProject"));
       const et = data.eventType ?? "Wedding";
       setEventType(et);
       setVenueId(data.venueId ?? null);
@@ -860,9 +869,7 @@ function Editor() {
     // would be left with no scene at all.
     if (customScenesOnly && customScenes.length <= 1) return;
     if (
-      !confirm(
-        "Remove this custom scene? Any furniture placed in it will be lost."
-      )
+      !confirm(t("editor.removeSceneConfirm"))
     )
       return;
 
@@ -944,7 +951,7 @@ function Editor() {
           <div>
             <h1 className="font-bold text-zinc-900 text-sm leading-tight">{projectName}</h1>
             <p className="text-[11px] text-zinc-400 font-medium uppercase tracking-wider leading-none mt-0.5">
-              {EVENT_LABELS[eventType] ?? eventType}
+              {eventLabel}
               {displayVenueName ? ` · ${displayVenueName}` : ""} · {currentScene.label}
             </p>
           </div>
@@ -965,12 +972,12 @@ function Editor() {
           >
             <Save className={`w-3.5 h-3.5 ${isSaving ? "animate-spin" : ""}`} />
             {isSaving
-              ? "Saving…"
+              ? t("editor.saving")
               : saveStatus === "success"
-              ? "✓ Saved!"
+              ? `✓ ${t("editor.saved")}`
               : saveStatus === "error"
-              ? "✗ Error"
-              : "Save"}
+              ? `✗ ${t("editor.saveError")}`
+              : t("editor.save")}
           </button>
           <button
             onClick={handleExportPdf}
@@ -978,7 +985,7 @@ function Editor() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-600 bg-white border border-zinc-200 hover:bg-zinc-50 disabled:opacity-50 transition-all shadow-sm"
           >
             <FileText className={`w-3.5 h-3.5 ${isExportingPdf ? "animate-spin" : ""}`} />
-            {isExportingPdf ? "Generating…" : "PDF"}
+            {isExportingPdf ? t("editor.generating") : "PDF"}
           </button>
           <button
             onClick={handleShare}
@@ -989,7 +996,7 @@ function Editor() {
             }`}
           >
             <Share2 className={`w-3.5 h-3.5 ${isSharing ? "scale-110" : ""}`} />
-            {isSharing ? "Copied!" : "Share"}
+            {isSharing ? t("editor.copied") : t("editor.share")}
           </button>
           <button
             onClick={handleExportStandalone}
@@ -998,7 +1005,7 @@ function Editor() {
             style={{ background: "linear-gradient(135deg,#FF6B4A,#FF8E72)" }}
           >
             <Download className={`w-3.5 h-3.5 ${isExporting ? "animate-spin" : ""}`} />
-            {isExporting ? "Exporting…" : "Export"}
+            {isExporting ? t("editor.exporting") : t("editor.export")}
           </button>
         </div>
       </div>
@@ -1024,8 +1031,8 @@ function Editor() {
                 <Sofa className="w-3.5 h-3.5 text-white" />
               </div>
               <div>
-                <p className="text-[13px] font-bold text-zinc-900 leading-none">AI Suggestions</p>
-                <p className="text-[10px] text-zinc-400 leading-none mt-0.5">Smart design · Logo · Chat</p>
+                <p className="text-[13px] font-bold text-zinc-900 leading-none">{t("editor.aiSuggestions")}</p>
+                <p className="text-[10px] text-zinc-400 leading-none mt-0.5">{t("editor.aiSubtitle")}</p>
               </div>
             </div>
           </div>
@@ -1088,7 +1095,7 @@ function Editor() {
           <div className="absolute top-4 left-4 z-20 pointer-events-none">
             <div className="bg-black/45 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              360° Virtual Tour
+              {t("editor.virtualTour")}
             </div>
           </div>
 
@@ -1108,7 +1115,7 @@ function Editor() {
               }}
             >
               <Sofa className="w-4 h-4" />
-              Furniture
+              {t("editor.furniture")}
             </motion.button>
           </div>
 
@@ -1132,7 +1139,7 @@ function Editor() {
                   {currentScene?.isCustom && (
                     <>
                       <span className="px-1.5 py-0.5 rounded-full border border-white/30 text-[8px] uppercase tracking-wider text-white/80">
-                        Custom
+                        {t("editor.custom")}
                       </span>
                       {allScenes.length > 1 && (
                         <button
@@ -1141,7 +1148,7 @@ function Editor() {
                           }}
                           className="text-[10px] px-2 py-1 rounded-md border border-dashed border-red-400/60 text-red-400 hover:bg-red-500/10 transition-colors ml-2"
                         >
-                          Remove scene
+                          {t("editor.removeScene")}
                         </button>
                       )}
                     </>
@@ -1149,7 +1156,7 @@ function Editor() {
                 </div>
                 <p className="text-[9px] text-white/55 mt-0.5 leading-none">
                   {currentScene.dimensions ?? "—"} · {eventType}
-                  {currentScene.rentPrice ? ` · €${currentScene.rentPrice.toLocaleString()}/day` : ""}
+                  {currentScene.rentPrice ? ` · €${currentScene.rentPrice.toLocaleString()}${t("editor.perDay")}` : ""}
                 </p>
               </div>
               {/* Divider */}
@@ -1189,7 +1196,7 @@ function Editor() {
                               removeCustomScene(customIndex);
                             }}
                             className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-[9px] font-bold z-10 transition-colors"
-                            title="Remove this scene"
+                            title={t("editor.removeSceneTitle")}
                           >
                             ✕
                           </button>
@@ -1210,15 +1217,15 @@ function Editor() {
                   disabled={customScenes.length >= 3}
                   className="text-[10px] px-3 py-1 rounded-md border border-dashed border-white/40 text-white/80 hover:bg-white/10 hover:border-white/70 transition-colors"
                 >
-                  + Import Scene
+                  + {t("editor.importScene")}
                 </button>
                 {customScenes.length >= 3 ? (
                   <span className="text-[9px] text-red-400/80 ml-1">
-                    Max 3 custom scenes per project reached
+                    {t("editor.maxCustomScenes")}
                   </span>
                 ) : (
                   <span className="text-[9px] text-white/50 ml-1">
-                    Custom scenes: {customScenes.length}/3 — max 3 per project
+                    {t("editor.customScenes")}: {customScenes.length}/3 — {t("editor.maxPerProject")}
                   </span>
                 )}
               </div>
@@ -1233,7 +1240,7 @@ function Editor() {
                 style={{ background: "rgba(0,0,0,0.72)", color: "#a3e635", border: "1px solid rgba(163,230,53,0.25)" }}
               >
                 <div className="text-[8px] font-bold uppercase tracking-widest text-lime-400/70 mb-1">
-                  Placement Debug · {placedItems.length} items
+                  {t("editor.placementDebug")} · {placedItems.length} {t("editor.items")}
                 </div>
                 {placedItems.slice(0, 8).map((p) => (
                   <div
@@ -1248,14 +1255,14 @@ function Editor() {
                   >
                     {p.item.label.slice(0, 10).padEnd(10)} y={p.yaw.toFixed(2)} p={p.pitch.toFixed(2)}
                     {p.pitch > 0.04 && p.pitch < 0.18
-                      ? " ✓ floor"
+                      ? ` ✓ ${t("editor.floor")}`
                       : p.pitch < 0
-                      ? " ✗ ceil"
-                      : " ⚠ horizon"}
+                      ? ` ✗ ${t("editor.ceil")}`
+                      : ` ⚠ ${t("editor.horizon")}`}
                   </div>
                 ))}
                 {placedItems.length > 8 && (
-                  <div className="text-lime-400/50">+{placedItems.length - 8} more…</div>
+                  <div className="text-lime-400/50">+{placedItems.length - 8} {t("editor.more")}</div>
                 )}
               </div>
             </div>
@@ -1284,12 +1291,13 @@ function Editor() {
 }
 
 export default function EditorPage() {
+  const { t } = useLanguage();
   return (
     <Suspense fallback={
       <div className="h-[calc(100vh-112px)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-coral-500/20 border-t-coral-500 rounded-full animate-spin" />
-          <p className="text-zinc-500 font-medium">Loading Editor...</p>
+          <p className="text-zinc-500 font-medium">{t("editor.loadingEditor")}</p>
         </div>
       </div>
     }>
@@ -1300,10 +1308,11 @@ export default function EditorPage() {
 
 
 function HintOverlay() {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 3500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setVisible(false), 3500);
+    return () => clearTimeout(timer);
   }, []);
   return (
     <motion.div
@@ -1313,7 +1322,7 @@ function HintOverlay() {
     >
       <div className="bg-black/40 backdrop-blur-sm text-white text-sm font-medium px-5 py-3 rounded-2xl flex items-center gap-3">
         <span className="text-xl">👆</span>
-        Drag to explore the 360° venue
+        {t("editor.dragToExplore")}
       </div>
     </motion.div>
   );
