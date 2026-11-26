@@ -6,6 +6,7 @@ import ErrorReporter from "@/components/ErrorReporter";
 import Script from "next/script";
 import { Navbar } from "@/components/Navbar";
 import { AuthProvider } from "@/lib/AuthContext";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { Toaster } from "sonner";
 
@@ -51,12 +52,14 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AuthProvider>
-              <Navbar />
-              <main className="pt-28 min-h-screen">
-                {children}
-              </main>
-            </AuthProvider>
+            <LanguageProvider>
+              <AuthProvider>
+                <Navbar />
+                <main className="pt-28 min-h-screen">
+                  {children}
+                </main>
+              </AuthProvider>
+            </LanguageProvider>
             <Toaster position="top-center" richColors />
           </ThemeProvider>
         <VisualEditsMessenger />

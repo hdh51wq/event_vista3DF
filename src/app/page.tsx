@@ -14,31 +14,32 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-const features = [
-  {
-    title: "Immersive 360° Scenes",
-    description: "Upload real venue captures and design inside them with pixel-perfect accuracy.",
-    icon: Globe,
-    color: "bg-blue-50 text-blue-500",
-  },
-  {
-    title: "Vast Asset Library",
-    description: "Access thousands of premium furniture, lighting, and structural elements.",
-    icon: Box,
-    color: "bg-coral-50 text-coral-500",
-  },
-  {
-    title: "Real-time Collaboration",
-    description: "Present your designs to clients and agencies with instant shareable links.",
-    icon: Users,
-    color: "bg-emerald-50 text-emerald-500",
-  },
-];
-
-  export default function Home() {
+export default function Home() {
     const { isLoggedIn } = useAuth();
-    
+    const { t } = useLanguage();
+
+    const features = [
+      {
+        title: t("landing.featureScenesTitle"),
+        description: t("landing.featureScenesDesc"),
+        icon: Globe,
+        color: "bg-blue-50 text-blue-500",
+      },
+      {
+        title: t("landing.featureLibraryTitle"),
+        description: t("landing.featureLibraryDesc"),
+        icon: Box,
+        color: "bg-coral-50 text-coral-500",
+      },
+      {
+        title: t("landing.featureCollabTitle"),
+        description: t("landing.featureCollabDesc"),
+        icon: Users,
+        color: "bg-emerald-50 text-emerald-500",
+      },
+    ];
     return (
       <div className="max-w-7xl mx-auto px-6 py-12 md:py-24">
         <div className="grid lg:grid-cols-2 gap-16 items-center mb-32">
@@ -49,24 +50,24 @@ const features = [
           >
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-coral-50 border border-coral-100 text-coral-600 text-[10px] font-bold uppercase tracking-wider mb-6">
               <Sparkles className="w-3 h-3" />
-              The Future of Event Scénography
+              {t("landing.badge")}
             </div>
             <h1 className="text-5xl md:text-7xl font-bold text-zinc-900 dark:text-zinc-50 leading-[1.1] mb-6 tracking-tight">
-              Design <span className="text-coral-400 italic">immersive</span> event venues.
+              {t("landing.heroTitleA")} <span className="text-coral-400 italic">{t("landing.heroTitleB")}</span> {t("landing.heroTitleC")}
             </h1>
             <p className="text-xl text-zinc-500 dark:text-zinc-400 mb-10 leading-relaxed max-w-lg">
-              Professional 360° platform for event agencies to design, visualize, and present scénography inside real venues.
+              {t("landing.heroSubtitle")}
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Link 
                 href={isLoggedIn ? "/dashboard" : "/login"} 
                 className="btn-primary flex items-center gap-2 text-lg px-8 py-4"
               >
-                {isLoggedIn ? "Go to Dashboard" : "Get Started Free"}
+                {isLoggedIn ? t("landing.goToDashboard") : t("landing.getStarted")}
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <button className="btn-secondary flex items-center gap-2 text-lg px-8 py-4">
-                Watch Demo
+                {t("landing.watchDemo")}
               </button>
             </div>
 
@@ -75,12 +76,12 @@ const features = [
             <div className="flex -space-x-3">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-zinc-100 overflow-hidden">
-                  <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
+                  <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt={t("landing.avatarAlt")} />
                 </div>
               ))}
             </div>
             <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium">
-              Trusted by <span className="text-zinc-900 dark:text-zinc-50 font-bold">500+</span> agencies worldwide
+              {t("landing.trustedBy")} <span className="text-zinc-900 dark:text-zinc-50 font-bold">500+</span> {t("landing.trustedByEnd")}
             </p>
           </div>
         </motion.div>
@@ -95,14 +96,14 @@ const features = [
             <div className="w-full h-full rounded-2xl overflow-hidden relative group">
               <img 
                 src="https://images.unsplash.com/photo-1511795409834-ef04bbd61622?q=80&w=2000&auto=format&fit=crop" 
-                alt="Venue" 
+                alt={t("landing.venueAlt")} 
                 className="w-full h-full object-cover grayscale-[0.2] group-hover:scale-110 transition-transform duration-1000"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-8 left-8 right-8 text-white">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-2 h-2 rounded-full bg-coral-400 animate-pulse" />
-                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">Live Editor Preview</span>
+                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">{t("landing.livePreview")}</span>
                 </div>
                 <h3 className="text-2xl font-bold">Palais des Festivals</h3>
               </div>
@@ -119,8 +120,8 @@ const features = [
                 <Layout className="w-4 h-4 text-emerald-500" />
               </div>
               <div>
-                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">Status</p>
-                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-100">Ready to present</p>
+                <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{t("landing.status")}</p>
+                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-100">{t("landing.readyToPresent")}</p>
               </div>
             </div>
             <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
@@ -134,7 +135,7 @@ const features = [
             className="absolute -bottom-10 -left-10 glass-card p-5 w-56 hidden md:block"
           >
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-100">Active Assets</h4>
+              <h4 className="text-xs font-bold text-zinc-800 dark:text-zinc-100">{t("landing.activeAssets")}</h4>
               <Maximize2 className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
             </div>
             <div className="space-y-3">
@@ -167,7 +168,7 @@ const features = [
               {f.description}
             </p>
             <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-coral-500 hover:gap-3 transition-all">
-              Learn more
+              {t("landing.learnMore")}
               <ChevronRight className="w-4 h-4" />
             </Link>
           </motion.div>
