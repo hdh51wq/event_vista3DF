@@ -4,8 +4,10 @@ import * as React from "react";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export function ThemeToggle() {
+  const { t } = useLanguage();
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -15,7 +17,7 @@ export function ThemeToggle() {
     return (
       <Button variant="ghost" size="icon" className="rounded-full w-10 h-10" disabled>
         <Sun className="h-[1.2rem] w-[1.2rem] opacity-0" />
-        <span className="sr-only">Toggle theme</span>
+        <span className="sr-only">{t("theme.toggle")}</span>
       </Button>
     );
   }
@@ -32,7 +34,7 @@ export function ThemeToggle() {
       ) : (
         <Moon className="h-[1.2rem] w-[1.2rem]" />
       )}
-      <span className="sr-only">Toggle theme</span>
+      <span className="sr-only">{t("theme.toggle")}</span>
     </Button>
   );
 }

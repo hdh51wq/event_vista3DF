@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Send, X, ChevronDown, Loader2, Sparkles, TriangleAlert } from "lucide-react";
 import { PlacedItem } from "@/components/SceneOverlay";
@@ -63,6 +64,7 @@ function BudgetBar({
   context: ProjectContext;
   catalog: FurnitureItem[];
 }) {
+  const { t } = useLanguage();
   const currentSpend = context.scenes.reduce((total, s) => {
     const itemCost = s.items.reduce((sum, p) => {
       const price = p.item.price ?? catalog.find((f) => f.id === p.item.id)?.price ?? 0;
@@ -77,7 +79,7 @@ function BudgetBar({
   return (
     <div className="px-4 py-3 border-b border-white/10">
       <div className="flex items-center justify-between text-[11px] font-semibold mb-1.5">
-        <span className="text-white/60">Current spend</span>
+        <span className="text-white/60">{t("aiChat.currentSpend")}</span>
         <span className={over ? "text-red-400" : "text-emerald-400"}>
           €{currentSpend.toLocaleString()} / €{context.budget.toLocaleString()}
         </span>
@@ -93,7 +95,7 @@ function BudgetBar({
       {over && (
         <div className="mt-1.5 flex items-center gap-1 text-[10px] text-red-400 font-medium">
           <TriangleAlert className="w-3 h-3" />
-          Over budget by €{(currentSpend - context.budget).toLocaleString()}
+          {t("aiChat.overBudgetBy")} €{(currentSpend - context.budget).toLocaleString()}
         </div>
       )}
     </div>
@@ -210,12 +212,12 @@ function formatInline(text: string): string {
     .replace(/`(.+?)`/g, '<code class="bg-white/15 px-1 rounded text-xs">$1</code>');
 }
 
-const QUICK_PROMPTS = [
-  "How many chairs do I need per scene?",
-  "Optimise my budget allocation",
-  "What lighting is recommended?",
-  "Compare my current setup to best practices",
-];
+const QUICK_PROMPT_KEYS = [
+  "aiChat.quickChairs",
+  "aiChat.quickBudget",
+  "aiChat.quickLighting",
+  "aiChat.quickCompare",
+] as const;
 
 interface AIChatbotProps {
   context: ProjectContext;
@@ -226,6 +228,7 @@ export default function AIChatbot({
   context,
   furnitureCatalog = FALLBACK_FURNITURE_ITEMS,
 }: AIChatbotProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -250,7 +253,7 @@ export default function AIChatbot({
         setMessages([
           {
             role: "assistant",
-            content: `Hi! I'm your EventVista AI assistant for **${context.projectName}**.\n\nI've analysed your **${totalScenes} scene${totalScenes > 1 ? "s" : ""}** (${context.eventType}) with a budget of **€${context.budget.toLocaleString()}**${area ? ` across spaces up to ${area.toFixed(0)} m²` : ""}.\n\nAsk me anything about asset quantities, budget allocation, or scenography recommendations!`,
+            content: `${t("aiChat.greetingIntro")} **${context.projectName}**.\n\n${t("aiChat.greetingAnalysed")} **${totalScenes} ${totalScenes > 1 ? t("aiChat.scenesPlural") : t("aiChat.sceneSingular")}** (${context.eventType}) ${t("aiChat.greetingWithBudget")} **€${context.budget.toLocaleString()}**${area ? ` ${t("aiChat.greetingAcrossSpaces")} ${area.toFixed(0)} m²` : ""}.\n\n${t("aiChat.greetingAsk")}`,
           },
         ]);
       }
@@ -286,7 +289,7 @@ export default function AIChatbot({
               ...prev,
               {
                 role: "assistant",
-                content: data.error ?? "Something went wrong. Please try again.",
+                content: data.error ?? t("aiChat.somethingWrong"),
                 isError: true,
               },
             ]);
@@ -305,7 +308,7 @@ export default function AIChatbot({
           ...prev,
           {
             role: "assistant",
-            content: "Network error. Check your connection and try again.",
+            content: t("aiChat.networkError"),
             isError: true,
           },
         ]);
@@ -353,16 +356,16 @@ export default function AIChatbot({
             <Sparkles className="w-4 h-4" />
           </div>
           <div className="text-left">
-            <div className="font-bold text-[13px] leading-none mb-0.5">AI Asset Advisor</div>
+            <div className="font-bold text-[13px] leading-none mb-0.5">{t("aiChat.title")}</div>
             <div className="text-[10px] font-medium text-white/70 leading-none">
-              {open ? "Click to collapse" : "Smart recommendations · Budget analysis"}
+              {open ? t("aiChat.collapse") : t("aiChat.subtitle")}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {budgetOver && (
             <span className="bg-red-500/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Over Budget
+              {t("aiChat.overBudget")}
             </span>
           )}
           <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -399,7 +402,7 @@ export default function AIChatbot({
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center text-white/30 text-sm">
                     <Bot className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    Opening session...
+                    {t("aiChat.openingSession")}
                   </div>
                 </div>
               )}
@@ -417,7 +420,7 @@ export default function AIChatbot({
                   </div>
                   <div className="bg-white/10 rounded-2xl rounded-bl-sm px-4 py-3 border border-white/10 flex items-center gap-2">
                     <Loader2 className="w-3.5 h-3.5 text-coral-400 animate-spin" />
-                    <span className="text-white/50 text-sm">Analysing your project…</span>
+                    <span className="text-white/50 text-sm">{t("aiChat.analysingProject")}</span>
                   </div>
                 </motion.div>
               )}
@@ -427,13 +430,13 @@ export default function AIChatbot({
             {/* Quick prompts */}
             {messages.length <= 1 && !loading && (
               <div className="px-4 pb-2 flex gap-1.5 flex-wrap">
-                {QUICK_PROMPTS.map((p, i) => (
+                {QUICK_PROMPT_KEYS.map((key, i) => (
                   <button
                     key={i}
-                    onClick={() => sendMessage(p)}
+                    onClick={() => sendMessage(t(key))}
                     className="text-[11px] font-medium px-3 py-1.5 rounded-xl bg-white/8 hover:bg-white/15 text-white/60 hover:text-white/90 border border-white/10 transition-all"
                   >
-                    {p}
+                    {t(key)}
                   </button>
                 ))}
               </div>
@@ -450,7 +453,7 @@ export default function AIChatbot({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about chairs, budget, lighting…"
+                  placeholder={t("aiChat.inputPlaceholder")}
                   rows={1}
                   disabled={loading}
                   className="flex-1 bg-transparent text-white text-sm placeholder-white/30 resize-none outline-none leading-5 py-1 max-h-20 scrollbar-hide disabled:opacity-50"
@@ -472,7 +475,7 @@ export default function AIChatbot({
                 </motion.button>
               </div>
               <p className="text-[10px] text-white/25 text-center mt-1.5">
-                Powered by Groq · Enter to send · Shift+Enter for new line
+                {t("aiChat.footerHint")}
               </p>
             </div>
           </motion.div>

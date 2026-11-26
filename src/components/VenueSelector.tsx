@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Maximize2, DollarSign } from "lucide-react";
 import { sceneTemplatesFor, sceneThumb, type TemplateScene } from "@/lib/scenes";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import type { Language } from "@/lib/i18n/translations";
 
 export interface VenueSelectorProps {
   eventType: string;
@@ -10,11 +12,11 @@ export interface VenueSelectorProps {
   onSceneSelect: (scene: TemplateScene) => void;
 }
 
-function formatEventDate(dateStr: string): string {
+function formatEventDate(dateStr: string, language: Language): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString(language === "fr" ? "fr-FR" : "en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
 // Shown right after a project is created. Instead of a venue list, it
@@ -27,6 +29,7 @@ export default function VenueSelector({
   eventDate,
   onSceneSelect,
 }: VenueSelectorProps) {
+  const { t, language } = useLanguage();
   const templates = sceneTemplatesFor(eventType);
 
   return (
@@ -49,11 +52,11 @@ export default function VenueSelector({
           <div className="shrink-0 flex items-start justify-between gap-4 p-6 border-b border-zinc-100 dark:border-zinc-800">
             <div>
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-                Choose Your Venue
+                {t("venue.title")}
               </h2>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                Pick the 360° scene for your {eventType}
-                {eventDate ? ` on ${formatEventDate(eventDate)}` : ""} — each one is a single-scene template
+                {t("venue.subtitlePick")} {eventType}
+                {eventDate ? ` ${t("venue.subtitleOn")} ${formatEventDate(eventDate, language)}` : ""} {t("venue.subtitleSuffix")}
               </p>
             </div>
           </div>
@@ -62,42 +65,42 @@ export default function VenueSelector({
           <div className="flex-1 overflow-y-auto p-6">
             {templates.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {templates.map((t) => (
+                {templates.map((tpl) => (
                   <div
-                    key={t.scene.label}
+                    key={tpl.scene.label}
                     className="glass-card overflow-hidden rounded-2xl flex flex-col transition-all"
                   >
                     <div className="aspect-[4/3] relative overflow-hidden bg-zinc-100 dark:bg-zinc-800">
                       <img
-                        src={sceneThumb(t.scene.src)}
-                        alt={t.scene.label}
+                        src={sceneThumb(tpl.scene.src)}
+                        alt={tpl.scene.label}
                         className="object-cover w-full h-full"
                       />
                       <div className="absolute top-3 left-3">
                         <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-600 border border-white/50">
-                          {t.eventType}
+                          {tpl.eventType}
                         </span>
                       </div>
                     </div>
                     <div className="p-5 flex flex-col flex-1">
                       <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-                        {t.scene.label}
+                        {tpl.scene.label}
                       </h3>
                       <div className="mt-2 space-y-1 text-sm text-zinc-500 dark:text-zinc-400">
                         <p className="flex items-center gap-2">
                           <Maximize2 className="w-3.5 h-3.5 shrink-0" />
-                          1 Scene · {t.scene.dimensions}
+                          {t("venue.oneScene")} · {tpl.scene.dimensions}
                         </p>
                         <p className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-300">
                           <DollarSign className="w-3.5 h-3.5 shrink-0" />
-                          €{t.scene.rentPrice.toLocaleString()} / day
+                          €{tpl.scene.rentPrice.toLocaleString()} {t("venue.perDay")}
                         </p>
                       </div>
                       <button
-                        onClick={() => onSceneSelect(t.scene)}
+                        onClick={() => onSceneSelect(tpl.scene)}
                         className="mt-4 w-full py-3 rounded-xl font-semibold text-sm transition-all btn-primary shadow-md hover:shadow-lg"
                       >
-                        Select Scene
+                        {t("venue.selectScene")}
                       </button>
                     </div>
                   </div>
@@ -105,7 +108,7 @@ export default function VenueSelector({
               </div>
             ) : (
               <p className="text-zinc-500 dark:text-zinc-400 text-center py-8">
-                No scenes to display for this event type.
+                {t("venue.noScenes")}
               </p>
             )}
           </div>

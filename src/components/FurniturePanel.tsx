@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import FurnitureUploadModal from "./FurnitureUploadModal";
 import Furniture3DUploadModal from "./Furniture3DUploadModal";
@@ -45,6 +46,7 @@ export default function FurniturePanel({
   projectId,
 }: FurniturePanelProps) {
   const { user, token, updateUser, removeCustomFurniture, removeCustom3DFurniture } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<FurnitureTab>("3d");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [is3DUploadModalOpen, setIs3DUploadModalOpen] = useState(false);
@@ -137,7 +139,7 @@ export default function FurniturePanel({
               <div className="flex items-center gap-2">
                 <Library className="w-4 h-4 text-coral-400" />
                 <span className="text-white font-bold text-sm tracking-tight uppercase">
-                  Furniture Library
+                  {t("furnPanel.library")}
                 </span>
               </div>
               <button
@@ -159,7 +161,7 @@ export default function FurniturePanel({
                     }`}
                 >
                   <Box className="w-3 h-3" />
-                  3D Furniture
+                  {t("furnPanel.tab3d")}
                 </button>
                 <button
                   type="button"
@@ -170,7 +172,7 @@ export default function FurniturePanel({
                     }`}
                 >
                   <ImageIcon className="w-3 h-3" />
-                  2D Furniture
+                  {t("furnPanel.tab2d")}
                 </button>
               </div>
             </div>
@@ -183,13 +185,13 @@ export default function FurniturePanel({
                       <div className="flex items-center gap-2 mb-4">
                         <UserIcon className="w-3.5 h-3.5 text-blue-400" />
                         <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">
-                          My 3D Items
+                          {t("furnPanel.my3dItems")}
                         </h3>
                       </div>
 
                       {loading3DItems ? (
                         <div className="py-6 text-center text-[10px] text-white/30 uppercase tracking-wider">
-                          Loading…
+                          {t("furnPanel.loading")}
                         </div>
                       ) : my3DItems.length > 0 ? (
                         <div className="grid grid-cols-2 gap-3">
@@ -216,9 +218,9 @@ export default function FurniturePanel({
                             <Plus className="w-5 h-5 text-white/20 group-hover:text-white/60" />
                           </div>
                           <p className="text-[10px] text-white/30 font-medium text-center leading-relaxed">
-                            No custom 3D items yet.
+                            {t("furnPanel.noCustom3d")}
                             <br />
-                            Click to import your own.
+                            {t("furnPanel.clickToImport")}
                           </p>
                         </div>
                       )}
@@ -229,7 +231,7 @@ export default function FurniturePanel({
                     <div className="flex items-center gap-2 mb-4">
                       <Box className="w-3.5 h-3.5 text-blue-400" />
                       <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">
-                        3D Models
+                        {t("furnPanel.models3d")}
                       </h3>
                     </div>
 
@@ -246,7 +248,7 @@ export default function FurniturePanel({
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-dashed border-white/15 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-[11px] font-bold uppercase tracking-wider transition-all"
                   >
                     <Plus className="w-4 h-4" />
-                    Import 3D
+                    {t("furnPanel.import3d")}
                   </button>
                 </div>
               )}
@@ -258,7 +260,7 @@ export default function FurniturePanel({
                       <div className="flex items-center gap-2">
                         <UserIcon className="w-3.5 h-3.5 text-blue-400" />
                         <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">
-                          My Items
+                          {t("furnPanel.myItems")}
                         </h3>
                       </div>
                       <button
@@ -266,7 +268,7 @@ export default function FurniturePanel({
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-coral-500 hover:bg-coral-600 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-lg shadow-coral-500/20"
                       >
                         <Plus className="w-3 h-3" />
-                        Import 2D
+                        {t("furnPanel.import2d")}
                       </button>
                     </div>
 
@@ -291,9 +293,9 @@ export default function FurniturePanel({
                           <Plus className="w-5 h-5 text-white/20 group-hover:text-white/60" />
                         </div>
                         <p className="text-[10px] text-white/30 font-medium text-center leading-relaxed">
-                          No custom items yet.
+                          {t("furnPanel.noCustomItems")}
                           <br />
-                          Click to import your own.
+                          {t("furnPanel.clickToImport")}
                         </p>
                       </div>
                     )}
@@ -303,7 +305,7 @@ export default function FurniturePanel({
                     <div className="flex items-center gap-2 mb-4">
                       <ImageIcon className="w-3.5 h-3.5 text-zinc-500" />
                       <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest">
-                        Standard Assets
+                        {t("furnPanel.standardAssets")}
                       </h3>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -349,7 +351,7 @@ export default function FurniturePanel({
                       textAlign: "center",
                     }}
                   >
-                    🪑 Furniture Guide
+                    🪑 {t("furnPanel.tipTitle")}
                   </div>
 
                   <div
@@ -371,7 +373,7 @@ export default function FurniturePanel({
                         gap: 6,
                       }}
                     >
-                      <span>🖼️</span> 2D Furniture
+                      <span>🖼️</span> {t("furnPanel.tab2d")}
                     </div>
                     <div
                       style={{
@@ -380,7 +382,7 @@ export default function FurniturePanel({
                         lineHeight: 1.6,
                       }}
                     >
-                      Click any item to add it directly to the scene. You can also upload your own PNG images.
+                      {t("furnPanel.tip2dBody")}
                     </div>
                   </div>
 
@@ -404,7 +406,7 @@ export default function FurniturePanel({
                         gap: 6,
                       }}
                     >
-                      <span>🧊</span> 3D Furniture
+                      <span>🧊</span> {t("furnPanel.tab3d")}
                     </div>
                     <div
                       style={{
@@ -413,7 +415,7 @@ export default function FurniturePanel({
                         lineHeight: 1.6,
                       }}
                     >
-                      Drag any 3D item into the scene to place it. Aim the scene where you want it first, then drop it there. You can also upload your own GLB models.
+                      {t("furnPanel.tip3dBody")}
                     </div>
                   </div>
 
@@ -431,7 +433,7 @@ export default function FurniturePanel({
                       cursor: "pointer",
                     }}
                   >
-                    Got it! Let's design 🎨
+                    {t("furnPanel.tipGotIt")} 🎨
                   </button>
                 </div>
               </div>
@@ -469,17 +471,18 @@ function Custom3DFurnitureCard({
   item: Custom3DFurnitureItem;
   onRemove: (itemId: string) => Promise<boolean>;
 }) {
+  const { t } = useLanguage();
   const handleRemove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (
       !confirm(
-        "Remove this 3D furniture? It will be deleted from your library and Cloudinary permanently."
+        t("furnPanel.confirmRemove3d")
       )
     ) {
       return;
     }
     const ok = await onRemove(item.id);
-    if (!ok) alert("Failed to remove 3D furniture. Please try again.");
+    if (!ok) alert(t("furnPanel.remove3dFailed"));
   };
 
   return (
@@ -505,7 +508,7 @@ function Custom3DFurnitureCard({
         type="button"
         onClick={handleRemove}
         className="absolute top-2 right-2 z-20 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
-        title="Remove this 3D furniture"
+        title={t("furnPanel.remove3dTitle")}
       >
         ✕
       </button>
@@ -542,7 +545,7 @@ function Custom3DFurnitureCard({
             {item.label}
           </span>
           <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
-            drag to scene
+            {t("furnPanel.dragToScene")}
           </span>
           <span className="text-coral-400 text-[10px] font-bold">
             €{item.price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
@@ -567,6 +570,7 @@ function FurnitureCard({
   onRemove?: (itemId: string) => Promise<boolean>;
   force3D?: boolean;
 }) {
+  const { t } = useLanguage();
   const glbPath = FURNITURE_3D_MAP[item.id] ?? (item as unknown as { glbPath?: string }).glbPath;
   const is3D = Boolean(force3D || glbPath);
 
@@ -575,13 +579,13 @@ function FurnitureCard({
     if (
       !onRemove ||
       !confirm(
-        "Remove this custom furniture? It will be deleted from your library permanently."
+        t("furnPanel.confirmRemove")
       )
     ) {
       return;
     }
     const ok = await onRemove(item.id);
-    if (!ok) alert("Failed to remove furniture. Please try again.");
+    if (!ok) alert(t("furnPanel.removeFailed"));
   };
 
   return (
@@ -616,7 +620,7 @@ function FurnitureCard({
           type="button"
           onClick={handleRemove}
           className="absolute top-2 right-2 z-20 w-6 h-6 rounded-full bg-red-500/80 hover:bg-red-600 text-white text-xs flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100"
-          title="Remove this furniture"
+          title={t("furnPanel.removeTitle")}
         >
           ✕
         </button>
@@ -669,7 +673,7 @@ function FurnitureCard({
           </span>
           {is3D && (
             <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
-              drag to scene
+              {t("furnPanel.dragToScene")}
             </span>
           )}
           <span className="text-coral-400 text-[10px] font-bold">

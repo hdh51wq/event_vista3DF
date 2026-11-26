@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Check, FlipHorizontal } from "lucide-react";
 import { FurnitureItem } from "@/lib/furniture";
 import { PanoramaViewerHandle } from "./PanoramaViewer";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export type Facing = "front" | "back" | "left" | "right";
 
@@ -74,8 +75,17 @@ export default function SceneOverlay({
   viewerRef,
   readOnly = false,
 }: SceneOverlayProps) {
+  const { t } = useLanguage();
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+
+  // Display labels for the facing direction (the Facing value itself is data, not translated)
+  const faceLabels: Record<Facing, string> = {
+    front: t("sceneOverlay.face.front"),
+    back: t("sceneOverlay.face.back"),
+    left: t("sceneOverlay.face.left"),
+    right: t("sceneOverlay.face.right"),
+  };
 
   // Screen positions recomputed every rAF
   const [screenPositions, setScreenPositions] = useState<Record<string, ScreenPos>>({});
@@ -499,7 +509,7 @@ export default function SceneOverlay({
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", zIndex: 10,
                     }}
-                    title="Delete"
+                    title={t("sceneOverlay.delete")}
                   >✕</button>
                 )}
 
@@ -520,7 +530,7 @@ export default function SceneOverlay({
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", zIndex: 10,
                     }}
-                    title="Confirm position"
+                    title={t("sceneOverlay.confirmPosition")}
                   >
                     <Check size={13} strokeWidth={3} />
                   </button>
@@ -542,7 +552,7 @@ export default function SceneOverlay({
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer", boxShadow: "0 2px 6px rgba(0,0,0,0.3)", zIndex: 10,
                     }}
-                    title="Unlock to reposition"
+                    title={t("sceneOverlay.unlock")}
                   >✎</button>
                 )}
 
@@ -558,7 +568,7 @@ export default function SceneOverlay({
                               border: "2px solid rgba(255,107,74,0.85)",
                               cursor: "se-resize", zIndex: 10,
                             }}
-                            title="Resize"
+                            title={t("sceneOverlay.resize")}
                           />
                         </>
                       )}
@@ -566,7 +576,7 @@ export default function SceneOverlay({
                       {/* 3D rotate handle */}
                       {isSelected && !isLocked && !readOnly && (
                         <button
-                          title="Rotate 3D"
+                          title={t("sceneOverlay.rotate3d")}
                           onPointerDown={(e) => {
                             e.stopPropagation();
                             setRotatingUid(placed.uid);
@@ -610,7 +620,7 @@ export default function SceneOverlay({
                         >
                           <div className="flex items-center gap-1 px-2 border-r border-zinc-200 mr-1">
                             <span className="text-[10px] font-bold text-coral-500 uppercase tracking-tight">
-                              {displayFace}
+                              {faceLabels[displayFace]}
                             </span>
                           </div>
                           <button
@@ -626,7 +636,7 @@ export default function SceneOverlay({
                               color: placed.flipX ? "#FF6B4A" : "#52525b",
                             }}
                             className="hover:bg-zinc-100 transition-colors"
-                            title="Horizontal Flip"
+                            title={t("sceneOverlay.flipHorizontal")}
                           >
                             <FlipHorizontal size={14} />
                           </button>

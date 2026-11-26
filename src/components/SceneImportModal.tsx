@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, UploadCloud, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { uploadImage } from "@/lib/uploadImageClient";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import type { TranslationKey } from "@/lib/i18n/translations";
+
+type Translate = (key: TranslationKey) => string;
 
 export interface SceneImportModalProps {
   isOpen: boolean;
@@ -17,14 +21,14 @@ export interface SceneImportModalProps {
   }) => void;
 }
 
-export async function validate360Scene(file: File): Promise<string | null> {
+export async function validate360Scene(file: File, t: Translate): Promise<string | null> {
   return new Promise((resolve) => {
     if (!file.type.startsWith("image/")) {
-      resolve("Please upload a JPG or PNG image file.");
+      resolve(t("sceneImport.error.notImage"));
       return;
     }
     if (file.size > 150 * 1024 * 1024) {
-      resolve("File too large. Maximum size is 150MB.");
+      resolve(t("sceneImport.error.tooLarge"));
       return;
     }
     const img = new Image();
@@ -32,14 +36,14 @@ export async function validate360Scene(file: File): Promise<string | null> {
     img.onload = () => {
       URL.revokeObjectURL(url);
       if (img.width < 1024) {
-        resolve(`Image too small (${img.width}×${img.height}px). Minimum width is 1024px.`);
+        resolve(`${t("sceneImport.error.tooSmall")} (${img.width}×${img.height}px). ${t("sceneImport.error.minWidth")}`);
         return;
       }
       const ratio = img.width / img.height;
       if (ratio < 1.9 || ratio > 2.1) {
         resolve(
-          `Not a valid 360° panorama. Your image is ${img.width}×${img.height}px ` +
-            `(ratio ${ratio.toFixed(2)}:1). Required ratio is 2:1 — e.g. 4096×2048.`
+          `${t("sceneImport.error.notPanorama")} ${t("sceneImport.error.yourImageIs")} ${img.width}×${img.height}px ` +
+            `(ratio ${ratio.toFixed(2)}:1). ${t("sceneImport.error.requiredRatio")}`
         );
         return;
       }
@@ -47,13 +51,13 @@ export async function validate360Scene(file: File): Promise<string | null> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      resolve("Could not read file.");
+      resolve(t("sceneImport.error.couldNotRead"));
     };
     img.src = url;
   });
 }
 
-async function compressScene(file: File): Promise<string> {
+async function compressScene(file: File, t: Translate): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -70,7 +74,7 @@ async function compressScene(file: File): Promise<string> {
       canvas.height = h;
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        reject(new Error("Could not process image."));
+        reject(new Error(t("sceneImport.error.couldNotProcess")));
         return;
       }
       ctx.drawImage(img, 0, 0, w, h);
@@ -80,7 +84,7 @@ async function compressScene(file: File): Promise<string> {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Could not read file. Please try another image."));
+      reject(new Error(`${t("sceneImport.error.couldNotRead")} ${t("sceneImport.error.tryAnotherImage")}`));
     };
     img.src = url;
   });
@@ -106,6 +110,7 @@ function formatBytes(bytes: number): string {
 export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImportModalProps) {
   const inputId = useId();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2>(1);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +147,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
     setFile(null);
     setDims(null);
 
-    const validationError = await validate360Scene(f);
+    const validationError = await validate360Scene(f, t);
     if (validationError) {
       setError(validationError);
       return;
@@ -164,10 +169,10 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      setError("Could not read file.");
+      setError(t("sceneImport.error.couldNotRead"));
     };
     img.src = url;
-  }, []);
+  }, [t]);
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -183,20 +188,20 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
   const handleImport = async () => {
     if (!file || !dims) return;
     if (!token) {
-      setError("You must be signed in to import a scene.");
+      setError(t("sceneImport.error.mustBeSignedIn"));
       return;
     }
     setImporting(true);
     setError(null);
     try {
-      const dataUrl = await compressScene(file);
+      const dataUrl = await compressScene(file, t);
       const src = await uploadImage(dataUrl, "custom-scenes", token);
       onImport({ name: sceneName || "Imported Scene", src, width: dims.width, height: dims.height });
       reset();
     } catch (err) {
       // Surface the real upload error instead of a generic message, so a
       // failed import is never silent again.
-      setError(err instanceof Error ? err.message : "Failed to upload scene image. Please try again.");
+      setError(err instanceof Error ? err.message : t("sceneImport.error.uploadFailed"));
       setImporting(false);
     }
   };
@@ -214,7 +219,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
       return;
     }
     setIsEstimating(true);
-    compressScene(file)
+    compressScene(file, t)
       .then((dataUrl) => {
         if (cancelled) return;
         setCompressedBytes(estimateBytesFromDataUrl(dataUrl));
@@ -230,7 +235,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
     return () => {
       cancelled = true;
     };
-  }, [step, file]);
+  }, [step, file, t]);
 
   const ratio = dims ? dims.width / dims.height : null;
 
@@ -254,9 +259,9 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
           >
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
               <div>
-                <p className="text-xs font-medium text-white/60 uppercase tracking-[0.18em]">Import 360° Scene</p>
+                <p className="text-xs font-medium text-white/60 uppercase tracking-[0.18em]">{t("sceneImport.title")}</p>
                 <p className="text-sm text-white/80">
-                  {step === 1 ? "Upload equirectangular panorama" : "Preview & confirm import"}
+                  {step === 1 ? t("sceneImport.step1Subtitle") : t("sceneImport.step2Subtitle")}
                 </p>
               </div>
               <button
@@ -269,9 +274,9 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
 
             <div className="px-5 py-4 space-y-4">
               <div className="flex items-center gap-2 text-[11px] text-white/50">
-                <span className={step === 1 ? "font-semibold text-white" : ""}>1. Upload</span>
+                <span className={step === 1 ? "font-semibold text-white" : ""}>{t("sceneImport.step1Label")}</span>
                 <span className="w-6 h-px bg-white/15" />
-                <span className={step === 2 ? "font-semibold text-white" : ""}>2. Preview & Import</span>
+                <span className={step === 2 ? "font-semibold text-white" : ""}>{t("sceneImport.step2Label")}</span>
               </div>
 
               {step === 1 && (
@@ -294,14 +299,14 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                         <UploadCloud className="w-5 h-5 text-white/80" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">Drop your 360° JPG or PNG here</p>
-                        <p className="text-[11px] text-white/55 mt-1">Equirectangular 2:1 panoramas only · Max 150MB</p>
+                        <p className="text-sm font-medium">{t("sceneImport.dropTitle")}</p>
+                        <p className="text-[11px] text-white/55 mt-1">{t("sceneImport.dropHint")}</p>
                       </div>
                       <button
                         type="button"
                         className="mt-1 inline-flex items-center px-3 py-1.5 rounded-full border border-white/25 text-[11px] font-medium text-white/80 hover:bg-white/10"
                       >
-                        Browse Files
+                        {t("sceneImport.browseFiles")}
                       </button>
                     </div>
                   </div>
@@ -310,10 +315,10 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                     <div className="flex items-start gap-2 rounded-2xl bg-red-500/10 border border-red-500/40 px-3 py-2.5 text-[11px] text-red-100">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
                       <div>
-                        <p className="font-semibold mb-0.5">There&apos;s a problem with this file</p>
+                        <p className="font-semibold mb-0.5">{t("sceneImport.errorTitle")}</p>
                         <p>{error}</p>
                         <p className="mt-1 text-red-200/80">
-                          Tip: Export an equirectangular panorama at 2:1 ratio, e.g. 4096×2048 or 8192×4096.
+                          {t("sceneImport.errorTip")}
                         </p>
                       </div>
                     </div>
@@ -324,19 +329,19 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                       <div className="w-full h-10 rounded-md bg-gradient-to-r from-emerald-500/50 to-emerald-400/40 border border-emerald-400/60 flex items-center justify-center text-[9px] font-semibold text-emerald-50">
                         2:1
                       </div>
-                      <span>360° panorama ✓</span>
+                      <span>{t("sceneImport.panorama360")}</span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-full h-10 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-[9px] font-semibold text-white/70">
                         3:4
                       </div>
-                      <span>Normal photo ✗</span>
+                      <span>{t("sceneImport.normalPhoto")}</span>
                     </div>
                     <div className="flex flex-col items-center gap-1">
                       <div className="w-full h-10 rounded-md bg-white/10 border border-white/20 flex items-center justify-center text-[9px] font-semibold text-white/70">
                         1:1
                       </div>
-                      <span>Square photo ✗</span>
+                      <span>{t("sceneImport.squarePhoto")}</span>
                     </div>
                   </div>
                 </div>
@@ -346,13 +351,13 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                 <div className="space-y-4">
                   <div className="overflow-hidden rounded-xl border border-white/15 bg-black/40">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={previewUrl ?? ""} alt="Preview" className="w-full max-h-[150px] object-cover" />
+                    <img src={previewUrl ?? ""} alt={t("sceneImport.previewAlt")} className="w-full max-h-[150px] object-cover" />
                   </div>
 
                   <div className="flex items-center gap-2 text-[11px]">
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/60 text-emerald-200 font-medium">
                       <CheckCircle2 className="w-3 h-3" />
-                      Valid 360° panorama
+                      {t("sceneImport.validPanorama")}
                     </span>
                     <span className="text-white/60">
                       {dims.width}×{dims.height}px · {formatBytes(file.size)} · ratio {ratio ? ratio.toFixed(2) : "—"}:1
@@ -360,15 +365,15 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                   </div>
 
                   <div className="text-[10px] text-white/45">
-                    Original: {formatBytes(file.size)} → Compressed:{" "}
-                    {isEstimating ? "estimating…" : compressedBytes ? `~${formatBytes(compressedBytes)}` : "—"}
+                    {t("sceneImport.original")}: {formatBytes(file.size)} → {t("sceneImport.compressed")}:{" "}
+                    {isEstimating ? t("sceneImport.estimating") : compressedBytes ? `~${formatBytes(compressedBytes)}` : "—"}
                   </div>
 
                   {error && (
                     <div className="flex items-start gap-2 rounded-2xl bg-red-500/10 border border-red-500/40 px-3 py-2.5 text-[11px] text-red-100">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
                       <div>
-                        <p className="font-semibold mb-0.5">Import failed</p>
+                        <p className="font-semibold mb-0.5">{t("sceneImport.importFailedTitle")}</p>
                         <p>{error}</p>
                       </div>
                     </div>
@@ -378,20 +383,20 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                     <div className="flex items-start gap-2 rounded-2xl bg-amber-500/10 border border-amber-400/50 px-3 py-2.5 text-[11px] text-amber-100">
                       <AlertTriangle className="w-3.5 h-3.5 mt-0.5" />
                       <div>
-                        <p className="font-semibold mb-0.5">Low resolution — may appear blurry</p>
-                        <p>Recommended: 2048×1024 minimum.</p>
+                        <p className="font-semibold mb-0.5">{t("sceneImport.lowResTitle")}</p>
+                        <p>{t("sceneImport.lowResHint")}</p>
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <label className="text-[11px] font-medium text-white/70">Scene name</label>
+                    <label className="text-[11px] font-medium text-white/70">{t("sceneImport.sceneNameLabel")}</label>
                     <input
                       type="text"
                       value={sceneName}
                       onChange={(e) => setSceneName(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/20 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/40"
-                      placeholder="e.g. Imported Lobby 360"
+                      placeholder={t("sceneImport.sceneNamePlaceholder")}
                     />
                   </div>
 
@@ -401,7 +406,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                       onClick={() => setStep(1)}
                       className="text-[11px] px-3 py-1.5 rounded-xl border border-white/20 text-white/80 hover:bg-white/10"
                     >
-                      Back
+                      {t("sceneImport.back")}
                     </button>
                     <button
                       type="button"
@@ -409,7 +414,7 @@ export default function SceneImportModal({ isOpen, onClose, onImport }: SceneImp
                       onClick={handleImport}
                       className="text-[11px] px-4 py-2 rounded-xl bg-white text-black font-semibold hover:bg-zinc-100 disabled:opacity-60"
                     >
-                      {importing ? "Importing…" : "Import Scene"}
+                      {importing ? t("sceneImport.importing") : t("sceneImport.importScene")}
                     </button>
                   </div>
                 </div>

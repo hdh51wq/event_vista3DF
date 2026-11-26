@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Plus, Check, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const MAX_GLB_BYTES = 5 * 1024 * 1024;
 
@@ -31,6 +32,7 @@ export default function Furniture3DUploadModal({
   onSuccess,
 }: Furniture3DUploadModalProps) {
   const { token, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [label, setLabel] = useState("");
   const [price, setPrice] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -57,10 +59,10 @@ export default function Furniture3DUploadModal({
   const validateFile = (selected: File | null): string | null => {
     if (!selected) return null;
     if (!selected.name.toLowerCase().endsWith(".glb")) {
-      return "Please upload a .glb file only.";
+      return t("furn3dUpload.glbOnly");
     }
     if (selected.size > MAX_GLB_BYTES) {
-      return `File is too large (${formatFileSize(selected.size)}). Max size is 5MB.`;
+      return `${t("furn3dUpload.fileTooLarge")} (${formatFileSize(selected.size)}). ${t("furn3dUpload.maxSize5mb")}`;
     }
     return null;
   };
@@ -88,27 +90,27 @@ export default function Furniture3DUploadModal({
 
   const handleImport = async () => {
     if (!label.trim()) {
-      setError("Please provide a name for the furniture.");
+      setError(t("furn3dUpload.nameRequired"));
       return;
     }
     if (!priceIsValid) {
-      setError("Please provide a valid price in €.");
+      setError(t("furn3dUpload.validPriceRequired"));
       return;
     }
     if (!file) {
-      setError("Please select a .glb file to upload.");
+      setError(t("furn3dUpload.selectGlb"));
       return;
     }
     if (!file.name.toLowerCase().endsWith(".glb")) {
-      setError("Please upload a .glb file only.");
+      setError(t("furn3dUpload.glbOnly"));
       return;
     }
     if (file.size > MAX_GLB_BYTES) {
-      setError(`File is too large (${formatFileSize(file.size)}). Max size is 5MB.`);
+      setError(`${t("furn3dUpload.fileTooLarge")} (${formatFileSize(file.size)}). ${t("furn3dUpload.maxSize5mb")}`);
       return;
     }
     if (!token) {
-      setError("Please log in to import 3D furniture.");
+      setError(t("furn3dUpload.loginRequired"));
       return;
     }
 
@@ -127,7 +129,7 @@ export default function Furniture3DUploadModal({
         body: formData,
       });
       const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData.error || "Upload failed");
+      if (!uploadRes.ok) throw new Error(uploadData.error || t("furn3dUpload.uploadFailed"));
 
       const saveRes = await fetch("/api/furniture/3d", {
         method: "POST",
@@ -142,7 +144,7 @@ export default function Furniture3DUploadModal({
         }),
       });
       const saveData = await saveRes.json();
-      if (!saveRes.ok) throw new Error(saveData.error || "Failed to save 3D furniture");
+      if (!saveRes.ok) throw new Error(saveData.error || t("furn3dUpload.saveFailed"));
 
       if (saveData.user) {
         updateUser(saveData.user);
@@ -162,7 +164,7 @@ export default function Furniture3DUploadModal({
         })
       );
 
-      setSuccess(`${imported.label} imported successfully.`);
+      setSuccess(`${imported.label} ${t("furn3dUpload.importedSuccessfully")}`);
       onSuccess({
         id: imported.id,
         label: imported.label,
@@ -172,7 +174,7 @@ export default function Furniture3DUploadModal({
       });
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed");
+      setError(err instanceof Error ? err.message : t("furn3dUpload.importFailed"));
     } finally {
       setLoading(false);
     }
@@ -210,8 +212,8 @@ export default function Furniture3DUploadModal({
         >
           <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Import 3D Furniture</h2>
-              <p className="text-sm text-white/50">Add a .glb model to your 3D library</p>
+              <h2 className="text-xl font-bold text-white">{t("furn3dUpload.title")}</h2>
+              <p className="text-sm text-white/50">{t("furn3dUpload.subtitle")}</p>
             </div>
             <button
               type="button"
@@ -226,19 +228,19 @@ export default function Furniture3DUploadModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-white/70 ml-1">
-                  Furniture Name <span className="text-coral-400">*</span>
+                  {t("furn3dUpload.nameLabel")} <span className="text-coral-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g., Designer Sofa..."
+                  placeholder={t("furn3dUpload.namePlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/20 focus:outline-none focus:border-coral-500/50 transition-all"
                 />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-white/70 ml-1">
-                  Price (€) <span className="text-coral-400">*</span>
+                  {t("furn3dUpload.priceLabel")} <span className="text-coral-400">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white/40 font-bold">
@@ -259,7 +261,7 @@ export default function Furniture3DUploadModal({
 
             <div className="space-y-4">
               <label className="text-sm font-semibold text-white/70 ml-1">
-                GLB Model <span className="text-coral-400">*</span>
+                {t("furn3dUpload.glbLabel")} <span className="text-coral-400">*</span>
               </label>
               <div
                 className={`relative rounded-2xl border-2 border-dashed transition-all p-6 ${
@@ -280,9 +282,9 @@ export default function Furniture3DUploadModal({
                     />
                     <Upload className="w-8 h-8 text-white/20" />
                     <div>
-                      <p className="text-sm font-semibold text-white/70">Upload GLB file</p>
+                      <p className="text-sm font-semibold text-white/70">{t("furn3dUpload.uploadGlb")}</p>
                       <p className="text-xs text-white/40 mt-1">
-                        Upload a .glb 3D model — max 5MB. Smaller files load faster.
+                        {t("furn3dUpload.uploadHint")}
                       </p>
                     </div>
                   </label>
@@ -299,7 +301,7 @@ export default function Furniture3DUploadModal({
                           <p className="text-sm font-semibold text-white truncate">{file.name}</p>
                           <p className="text-xs text-white/50">{formatFileSize(file.size)}</p>
                           {fileIsValid && (
-                            <p className="text-xs text-green-400 mt-1">Ready to import</p>
+                            <p className="text-xs text-green-400 mt-1">{t("furn3dUpload.readyToImport")}</p>
                           )}
                           {fileError && <p className="text-xs text-red-400 mt-1">{fileError}</p>}
                         </div>
@@ -341,13 +343,13 @@ export default function Furniture3DUploadModal({
 
             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
               <p className="text-[11px] font-medium text-white/40 flex items-center gap-2">
-                <Check className="w-3 h-3 text-green-500" /> Accepts .glb files only
+                <Check className="w-3 h-3 text-green-500" /> {t("furn3dUpload.acceptsGlbOnly")}
               </p>
               <p className="text-[11px] font-medium text-white/40 flex items-center gap-2">
-                <Check className="w-3 h-3 text-green-500" /> Max file size: 5MB
+                <Check className="w-3 h-3 text-green-500" /> {t("furn3dUpload.maxFileSize")}
               </p>
               <p className="text-[11px] font-medium text-white/40">
-                Upload a .glb 3D model — max 5MB. Smaller files load faster.
+                {t("furn3dUpload.uploadHint")}
               </p>
             </div>
           </div>
@@ -358,7 +360,7 @@ export default function Furniture3DUploadModal({
               onClick={handleClose}
               className="px-6 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition-colors"
             >
-              Cancel
+              {t("furn3dUpload.cancel")}
             </button>
             <button
               type="button"
@@ -369,12 +371,12 @@ export default function Furniture3DUploadModal({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Importing...
+                  {t("furn3dUpload.importing")}
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Import
+                  {t("furn3dUpload.importButton")}
                 </>
               )}
             </button>

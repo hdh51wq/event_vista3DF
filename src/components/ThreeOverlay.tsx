@@ -5,6 +5,8 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import { useMarzipanoCameraSync } from "@/hooks/useMarzipanoCameraSync";
 import { Furniture3D } from "./Furniture3D";
 
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 export interface Item3D {
   id: string;
   label: string;
@@ -102,6 +104,7 @@ export default function ThreeOverlay({
   const [showControls, setShowControls] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDraggingFromPanel, setIsDraggingFromPanel] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     setItems(initialItems ?? []);
@@ -259,7 +262,7 @@ export default function ThreeOverlay({
           pointerEvents: 'none',
           zIndex: 50,
         }}>
-          Drop here to place in scene
+          {t("three.dropHere")}
         </div>
       )}
 
@@ -335,7 +338,7 @@ export default function ThreeOverlay({
             transition: "bottom 0.2s",
           }}
         >
-          {showControls ? "▼ Hide controls" : "▲ Show controls"}
+          {showControls ? `▼ ${t("three.hideControls")}` : `▲ ${t("three.showControls")}`}
         </button>
       )}
 
@@ -356,7 +359,7 @@ export default function ThreeOverlay({
             pointerEvents: "all",
           }}
         >
-          <span style={{ color: "white", fontSize: 11 }}>Size</span>
+          <span style={{ color: "white", fontSize: 11 }}>{t("three.size")}</span>
           <input
             type="range"
             min={0.5}
@@ -409,9 +412,9 @@ export default function ThreeOverlay({
               background: "rgba(220,38,38,0.75)",
               padding: "4px 10px",
             }}
-            title="Remove selected item"
+            title={t("three.removeTitle")}
           >
-            Remove
+            {t("three.remove")}
           </button>
         </div>
       )}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Upload, Plus, Check, Loader2, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface FurnitureUploadModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface FurnitureUploadModalProps {
 
 export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: FurnitureUploadModalProps) {
   const { token, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [label, setLabel] = useState("");
   const [price, setPrice] = useState("0");
   const [files, setFiles] = useState<Record<string, File | null>>({
@@ -25,10 +27,19 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const viewLabel = (view: string): string =>
+    view === "front"
+      ? t("furnUpload.viewFront")
+      : view === "back"
+        ? t("furnUpload.viewBack")
+        : view === "left"
+          ? t("furnUpload.viewLeft")
+          : t("furnUpload.viewRight");
+
   function validatePNG(file: File): Promise<string | null> {
     return new Promise((resolve) => {
       if (file.type !== "image/png") {
-        resolve("Please upload a PNG file only.");
+        resolve(t("furnUpload.pngOnly"));
         return;
       }
       const img = new Image();
@@ -50,7 +61,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
         URL.revokeObjectURL(url);
         if (!hasTransparency) {
           resolve(
-            "Image must have a transparent background (PNG-24). Please remove the background first."
+            t("furnUpload.transparentRequired")
           );
         } else {
           resolve(null); // valid
@@ -71,7 +82,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError(`File size too large for ${view}. Max 5MB.`);
+      setError(`${t("furnUpload.fileTooLargeFor")} ${viewLabel(view)}. ${t("furnUpload.max5mb")}`);
       return;
     }
 
@@ -87,11 +98,11 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
 
   const handleUpload = async () => {
     if (!label) {
-      setError("Please provide a name for the furniture.");
+      setError(t("furnUpload.nameRequired"));
       return;
     }
     if (!files.front) {
-      setError("At least a front view image is required.");
+      setError(t("furnUpload.frontRequired"));
       return;
     }
 
@@ -117,7 +128,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Upload failed");
+        throw new Error(data.error || t("furnUpload.uploadFailed"));
       }
 
       // Update local user data with the new custom furniture
@@ -165,8 +176,8 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
           {/* Header */}
           <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-white">Upload Custom Furniture</h2>
-              <p className="text-sm text-white/50">Add your own items to the 360° library</p>
+              <h2 className="text-xl font-bold text-white">{t("furnUpload.title")}</h2>
+              <p className="text-sm text-white/50">{t("furnUpload.subtitle")}</p>
             </div>
             <button
               onClick={handleClose}
@@ -180,17 +191,17 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
             {/* Name input */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-white/70 ml-1">Furniture Name</label>
+                <label className="text-sm font-semibold text-white/70 ml-1">{t("furnUpload.nameLabel")}</label>
                 <input
                   type="text"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  placeholder="e.g., Designer Sofa..."
+                  placeholder={t("furnUpload.namePlaceholder")}
                   className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/20 focus:outline-none focus:border-coral-500/50 transition-all"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-white/70 ml-1">Price (USD)</label>
+                <label className="text-sm font-semibold text-white/70 ml-1">{t("furnUpload.priceLabel")}</label>
                 <div className="relative">
                   <span className="absolute left-5 top-1/2 -translate-y-1/2 text-white/40 font-bold">$</span>
                   <input
@@ -206,7 +217,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
 
             {/* Upload sections */}
             <div className="space-y-4">
-              <label className="text-sm font-semibold text-white/70 ml-1">View Orientations</label>
+              <label className="text-sm font-semibold text-white/70 ml-1">{t("furnUpload.viewOrientations")}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {["front", "back", "left", "right"].map((view) => (
                   <div key={view} className="space-y-2">
@@ -221,7 +232,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
                         <div className="relative w-full h-full">
                           <img
                             src={previews[view]}
-                            alt={view}
+                            alt={viewLabel(view)}
                             className="w-full h-full object-contain"
                           />
                           <button
@@ -241,7 +252,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
                           />
                           <Upload className="w-6 h-6 text-white/20 mb-2 group-hover:text-white/40 transition-colors" />
                           <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
-                            {view}
+                            {viewLabel(view)}
                             {view === "front" && <span className="text-coral-400 font-bold ml-1">*</span>}
                           </span>
                         </label>
@@ -266,10 +277,10 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
 
             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-2">
               <p className="text-[11px] font-medium text-white/40 flex items-center gap-2">
-                <Check className="w-3 h-3 text-green-500" /> Transparent background recommended (PNG/SVG)
+                <Check className="w-3 h-3 text-green-500" /> {t("furnUpload.transparentRecommended")}
               </p>
               <p className="text-[11px] font-medium text-white/40 flex items-center gap-2">
-                <Check className="w-3 h-3 text-green-500" /> Max file size: 5MB per image
+                <Check className="w-3 h-3 text-green-500" /> {t("furnUpload.maxFileSize")}
               </p>
             </div>
           </div>
@@ -280,7 +291,7 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
               onClick={handleClose}
               className="px-6 py-3 rounded-xl text-sm font-semibold text-white/60 hover:text-white transition-colors"
             >
-              Cancel
+              {t("furnUpload.cancel")}
             </button>
             <button
               onClick={handleUpload}
@@ -290,12 +301,12 @@ export default function FurnitureUploadModal({ isOpen, onClose, onSuccess }: Fur
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Uploading...
+                  {t("furnUpload.uploading")}
                 </>
               ) : (
                 <>
                   <Plus className="w-4 h-4" />
-                  Save to Library
+                  {t("furnUpload.saveToLibrary")}
                 </>
               )}
             </button>

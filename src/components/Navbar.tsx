@@ -7,10 +7,13 @@ import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { ThemeToggle } from "./ThemeToggle";
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, isLoggedIn, logout } = useAuth();
+  const { t } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
   // Guard: only render auth-dependent UI after client hydration
   const [mounted, setMounted] = useState(false);
@@ -19,10 +22,10 @@ export function Navbar() {
   if (pathname === "/login") return null;
 
   const navItems = [
-    { icon: Home, label: "Home", href: "/", show: true },
-    { icon: LayoutGrid, label: "Projects", href: "/dashboard", show: isLoggedIn },
-    { icon: BarChart3, label: "Analytics", href: "/analytics", show: isLoggedIn },
-    { icon: Settings, label: "Settings", href: "/settings", show: isLoggedIn },
+    { icon: Home, label: t("navbar.home"), href: "/", show: true },
+    { icon: LayoutGrid, label: t("navbar.projects"), href: "/dashboard", show: isLoggedIn },
+    { icon: BarChart3, label: t("navbar.analytics"), href: "/analytics", show: isLoggedIn },
+    { icon: Settings, label: t("navbar.settings"), href: "/settings", show: isLoggedIn },
   ];
 
   return (
@@ -58,6 +61,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           <ThemeToggle />
           {/* User menu — only after mount */}
           {mounted && isLoggedIn && (
@@ -68,7 +72,7 @@ export function Navbar() {
               >
                 <div className="flex-col items-end hidden sm:flex">
                   <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-none">{user?.name}</span>
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">Agency Admin</span>
+                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">{t("navbar.agencyAdmin")}</span>
                 </div>
                 <div className="w-9 h-9 bg-gradient-to-br from-coral-100 to-peach-100 dark:from-coral-900/30 dark:to-peach-900/30 rounded-xl flex items-center justify-center overflow-hidden border border-coral-200 dark:border-coral-800 group-hover:scale-105 transition-transform">
                   <User className="w-5 h-5 text-coral-600 dark:text-coral-400" />
@@ -79,7 +83,7 @@ export function Navbar() {
                 <div className="absolute top-full right-0 mt-3 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-zinc-100 dark:border-zinc-800 p-2 overflow-hidden animate-in fade-in slide-in-from-top-2">
                   <div className="px-4 py-3 border-b border-zinc-50 dark:border-zinc-800 mb-2 sm:hidden">
                     <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{user?.name}</p>
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Agency Admin</p>
+                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500">{t("navbar.agencyAdmin")}</p>
                   </div>
                   <Link
                     href="/settings"
@@ -87,14 +91,14 @@ export function Navbar() {
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-xl transition-colors"
                   >
                     <Settings className="w-4 h-4" />
-                    Settings
+                    {t("navbar.settings")}
                   </Link>
                   <button
                     onClick={() => { logout(); setShowUserMenu(false); }}
                     className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    Logout
+                    {t("navbar.logout")}
                   </button>
                 </div>
               )}

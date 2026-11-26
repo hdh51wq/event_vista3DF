@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Wand2,
@@ -70,11 +71,12 @@ function convertSuggestionToPlacedItems(
 }
 
 function StepIndicator({ step }: { step: Step }) {
+  const { t } = useLanguage();
   const steps: { key: Step | string; label: string; icon: React.ReactNode }[] = [
-    { key: "capturing", label: "Capture", icon: <Camera className="w-3.5 h-3.5" /> },
-    { key: "analysing", label: "Analyse", icon: <Eye className="w-3.5 h-3.5" /> },
-    { key: "preview",   label: "Preview", icon: <LayoutGrid className="w-3.5 h-3.5" /> },
-    { key: "placing",   label: "Apply",   icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { key: "capturing", label: t("aiDesign.stepCapture"), icon: <Camera className="w-3.5 h-3.5" /> },
+    { key: "analysing", label: t("aiDesign.stepAnalyse"), icon: <Eye className="w-3.5 h-3.5" /> },
+    { key: "preview",   label: t("aiDesign.stepPreview"), icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+    { key: "placing",   label: t("aiDesign.stepApply"),   icon: <Sparkles className="w-3.5 h-3.5" /> },
   ];
   const activeIdx = steps.findIndex((s) => s.key === step);
 
@@ -114,6 +116,7 @@ function RecommendationCard({
   suggestion: PlacementSuggestion;
   catalog: FurnitureItem[];
 }) {
+  const { t } = useLanguage();
   const item = catalog.find((f) => f.id === suggestion.id);
   const total = (item?.price ?? 0) * suggestion.quantity;
 
@@ -131,12 +134,12 @@ function RecommendationCard({
           {suggestion.label}
         </div>
         <div className="text-[10px] text-white/50">
-          {suggestion.quantity} unit{suggestion.quantity > 1 ? "s" : ""} · {suggestion.placements.length} placement{suggestion.placements.length > 1 ? "s" : ""}
+          {suggestion.quantity} {suggestion.quantity > 1 ? t("aiDesign.units") : t("aiDesign.unit")} · {suggestion.placements.length} {suggestion.placements.length > 1 ? t("aiDesign.placements") : t("aiDesign.placement")}
         </div>
       </div>
       <div className="text-right shrink-0">
         <div className="text-[12px] font-bold text-emerald-400">€{total.toLocaleString()}</div>
-        <div className="text-[9px] text-white/40">€{item?.price ?? 0}/unit</div>
+        <div className="text-[9px] text-white/40">€{item?.price ?? 0}{t("aiDesign.perUnit")}</div>
       </div>
     </motion.div>
   );
@@ -151,6 +154,7 @@ export default function AIAutoDesign({
   currentItems,
   catalog = FALLBACK_FURNITURE_ITEMS,
 }: AIAutoDesignProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<VisualDesignResponse | null>(null);
@@ -174,7 +178,7 @@ export default function AIAutoDesign({
     const imageBase64 = await onCapture();
     if (!imageBase64) {
       setStep("error");
-      setErrorMsg("Could not capture the scene. Please try again.");
+      setErrorMsg(t("aiDesign.captureError"));
       return;
     }
     capturedImageRef.current = imageBase64;
@@ -197,7 +201,7 @@ export default function AIAutoDesign({
 
       if (!res.ok || data.error) {
         setStep("error");
-        setErrorMsg(data.error ?? "AI analysis failed. Please try again.");
+        setErrorMsg(data.error ?? t("aiDesign.analysisError"));
         return;
       }
 
@@ -228,7 +232,7 @@ export default function AIAutoDesign({
       setStep("preview");
     } catch (e) {
       setStep("error");
-      setErrorMsg("Network error. Please check your connection.");
+      setErrorMsg(t("aiDesign.networkError"));
     }
   }, [onCapture, eventType, sceneLabel, dimensions]);
 
@@ -287,16 +291,16 @@ export default function AIAutoDesign({
             <Wand2 className="w-4 h-4" />
           </div>
           <div className="text-left">
-            <div className="font-bold text-[13px] leading-none mb-0.5">AI Auto-Design</div>
+            <div className="font-bold text-[13px] leading-none mb-0.5">{t("aiDesign.title")}</div>
             <div className="text-[10px] font-medium text-white/70 leading-none">
-              {open ? "Click to collapse" : "Visual scene analysis · Smart furniture placement"}
+              {open ? t("aiDesign.collapse") : t("aiDesign.subtitle")}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {step === "done" && (
             <span className="bg-emerald-500/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              Applied
+              {t("aiDesign.applied")}
             </span>
           )}
           <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
@@ -336,12 +340,10 @@ export default function AIAutoDesign({
                   </div>
                   <div>
                     <h3 className="text-white font-bold text-sm leading-none mb-1.5">
-                      AI Visual Auto-Design
+                      {t("aiDesign.heading")}
                     </h3>
                     <p className="text-white/50 text-[11px] leading-relaxed">
-                      Takes a snapshot of your current 360° scene, sends it to Vision AI to analyse
-                      the room layout, then automatically places the right furniture at optimal
-                      positions based on the space and your event type.
+                      {t("aiDesign.description")}
                     </p>
                   </div>
                 </div>
@@ -349,10 +351,10 @@ export default function AIAutoDesign({
                 {/* How it works */}
                 <div className="grid grid-cols-4 gap-2 mb-5">
                   {[
-                    { icon: <Camera className="w-4 h-4" />, label: "Capture scene", color: "text-blue-400 bg-blue-500/15 border-blue-500/25" },
-                    { icon: <Eye className="w-4 h-4" />, label: "Vision analysis", color: "text-violet-400 bg-violet-500/15 border-violet-500/25" },
-                    { icon: <LayoutGrid className="w-4 h-4" />, label: "Generate layout", color: "text-coral-400 bg-coral-500/15 border-coral-500/25" },
-                    { icon: <Sparkles className="w-4 h-4" />, label: "Auto-place", color: "text-emerald-400 bg-emerald-500/15 border-emerald-500/25" },
+                    { icon: <Camera className="w-4 h-4" />, label: t("aiDesign.howCapture"), color: "text-blue-400 bg-blue-500/15 border-blue-500/25" },
+                    { icon: <Eye className="w-4 h-4" />, label: t("aiDesign.howAnalyse"), color: "text-violet-400 bg-violet-500/15 border-violet-500/25" },
+                    { icon: <LayoutGrid className="w-4 h-4" />, label: t("aiDesign.howLayout"), color: "text-coral-400 bg-coral-500/15 border-coral-500/25" },
+                    { icon: <Sparkles className="w-4 h-4" />, label: t("aiDesign.howPlace"), color: "text-emerald-400 bg-emerald-500/15 border-emerald-500/25" },
                   ].map((step, i) => (
                     <div
                       key={i}
@@ -367,8 +369,9 @@ export default function AIAutoDesign({
                 <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <p className="text-[10px] text-amber-300/80 leading-relaxed">
-                    Analysing <strong className="text-amber-300">{sceneLabel}</strong> for a{" "}
-                    <strong className="text-amber-300">{eventType}</strong> event
+                    {t("aiDesign.analysingPrefix")} <strong className="text-amber-300">{sceneLabel}</strong>{" "}
+                    {t("aiDesign.analysingMiddle")} <strong className="text-amber-300">{eventType}</strong>
+                    {t("aiDesign.analysingSuffix")}
                     {dimensions ? ` (${dimensions})` : ""}.
                   </p>
                 </div>
@@ -384,7 +387,7 @@ export default function AIAutoDesign({
                   }}
                 >
                   <Play className="w-4 h-4" />
-                  Analyse &amp; Auto-Design Scene
+                  {t("aiDesign.analyseButton")}
                 </motion.button>
               </div>
             )}
@@ -411,19 +414,19 @@ export default function AIAutoDesign({
 
                 <div className="text-center">
                   <p className="text-white font-semibold text-sm mb-1">
-                    {step === "capturing" ? "Capturing 360° Scene…" : "Analysing with Vision AI…"}
+                    {step === "capturing" ? t("aiDesign.capturingTitle") : t("aiDesign.analysingTitle")}
                   </p>
                   <p className="text-white/40 text-[11px]">
                     {step === "capturing"
-                      ? "Taking a high-quality snapshot of the current view"
-                      : "Llama 4 Scout is reading the room layout and planning placement"}
+                      ? t("aiDesign.capturingSubtitle")
+                      : t("aiDesign.analysingSubtitle")}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2 text-violet-400">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="text-[11px] font-medium">
-                    {step === "capturing" ? "Rendering frame…" : "Processing image…"}
+                    {step === "capturing" ? t("aiDesign.capturingStatus") : t("aiDesign.analysingStatus")}
                   </span>
                 </div>
               </div>
@@ -436,7 +439,7 @@ export default function AIAutoDesign({
                 <div className="px-4 pt-4 pb-3 border-b border-white/8">
                   <div className="flex items-center gap-2 mb-2">
                     <Eye className="w-3.5 h-3.5 text-violet-400" />
-                    <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Scene Analysis</span>
+                    <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">{t("aiDesign.sceneAnalysisTitle")}</span>
                     <span className="ml-auto text-[10px] font-semibold text-white/40 bg-white/8 px-2 py-0.5 rounded-full">
                       {result.layoutStyle}
                     </span>
@@ -448,7 +451,7 @@ export default function AIAutoDesign({
                 <div className="px-4 pt-3 pb-3 border-b border-white/8">
                   <div className="flex items-center gap-2 mb-2">
                     <Wand2 className="w-3.5 h-3.5 text-coral-400" />
-                    <span className="text-[10px] font-bold text-coral-400 uppercase tracking-widest">Design Strategy</span>
+                    <span className="text-[10px] font-bold text-coral-400 uppercase tracking-widest">{t("aiDesign.designStrategy")}</span>
                   </div>
                   <p className="text-white/70 text-[11px] leading-relaxed">{result.designReasoning}</p>
                 </div>
@@ -458,10 +461,10 @@ export default function AIAutoDesign({
                   <div className="flex items-center gap-2 mb-2.5">
                     <LayoutGrid className="w-3.5 h-3.5 text-white/50" />
                     <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                      Furniture Plan
+                      {t("aiDesign.furniturePlan")}
                     </span>
                     <span className="ml-auto text-[10px] text-white/40">
-                      {totalPlacements} items to place
+                      {totalPlacements} {t("aiDesign.itemsToPlace")}
                     </span>
                   </div>
                   <div className="flex flex-col gap-2 max-h-52 overflow-y-auto scrollbar-hide">
@@ -475,7 +478,7 @@ export default function AIAutoDesign({
                 <div className="px-4 py-3 mx-4 mb-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
                   <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
                   <div className="flex-1">
-                    <div className="text-[10px] text-emerald-400/70 font-medium">Estimated furniture cost</div>
+                    <div className="text-[10px] text-emerald-400/70 font-medium">{t("aiDesign.estimatedCost")}</div>
                     <div className="text-lg font-bold text-emerald-400 leading-none">
                       €{(result.totalEstimatedCost ?? 0).toLocaleString()}
                     </div>
@@ -495,7 +498,7 @@ export default function AIAutoDesign({
                             : "text-white/40 hover:text-white/60"
                         }`}
                       >
-                        {mode === "replace" ? "Replace existing" : "Merge with existing"}
+                        {mode === "replace" ? t("aiDesign.replaceExisting") : t("aiDesign.mergeExisting")}
                       </button>
                     ))}
                   </div>
@@ -508,7 +511,7 @@ export default function AIAutoDesign({
                     className="flex-none px-3 py-2.5 rounded-xl text-[11px] font-semibold text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center gap-1.5"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    Re-analyse
+                    {t("aiDesign.reanalyse")}
                   </button>
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -521,7 +524,7 @@ export default function AIAutoDesign({
                     }}
                   >
                     <Sparkles className="w-4 h-4" />
-                    Apply {totalPlacements} Placements
+                    {t("aiDesign.stepApply")} {totalPlacements} {t("aiDesign.placementsCapital")}
                   </motion.button>
                 </div>
               </div>
@@ -534,8 +537,8 @@ export default function AIAutoDesign({
                   <Sparkles className="w-6 h-6 text-violet-300 animate-pulse" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-semibold text-sm mb-1">Placing furniture…</p>
-                  <p className="text-white/40 text-[11px]">Anchoring {totalPlacements} items in the scene</p>
+                  <p className="text-white font-semibold text-sm mb-1">{t("aiDesign.placingTitle")}</p>
+                  <p className="text-white/40 text-[11px]">{t("aiDesign.anchoringPrefix")} {totalPlacements} {t("aiDesign.anchoringSuffix")}</p>
                 </div>
                 <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
               </div>
@@ -553,9 +556,9 @@ export default function AIAutoDesign({
                   <CheckCircle2 className="w-7 h-7 text-emerald-400" />
                 </motion.div>
                 <div className="text-center">
-                  <p className="text-white font-bold text-sm mb-1">Auto-Design Applied!</p>
+                  <p className="text-white font-bold text-sm mb-1">{t("aiDesign.doneTitle")}</p>
                   <p className="text-white/50 text-[11px]">
-                    {totalPlacements} items placed in your scene. Drag to fine-tune any position.
+                    {totalPlacements} {t("aiDesign.itemsPlaced")} {t("aiDesign.dragToFineTune")}
                   </p>
                 </div>
                 <button
@@ -563,7 +566,7 @@ export default function AIAutoDesign({
                   className="px-4 py-2 rounded-xl text-[11px] font-semibold text-violet-400 bg-violet-500/15 border border-violet-500/25 hover:bg-violet-500/25 transition-all flex items-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Run another analysis
+                  {t("aiDesign.runAnother")}
                 </button>
               </div>
             )}
@@ -575,7 +578,7 @@ export default function AIAutoDesign({
                   <X className="w-7 h-7 text-red-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-white font-bold text-sm mb-1">Analysis Failed</p>
+                  <p className="text-white font-bold text-sm mb-1">{t("aiDesign.analysisFailed")}</p>
                   <p className="text-white/50 text-[11px] max-w-xs leading-relaxed">{errorMsg}</p>
                 </div>
                 <button
@@ -583,7 +586,7 @@ export default function AIAutoDesign({
                   className="px-4 py-2 rounded-xl text-[11px] font-semibold text-red-400 bg-red-500/15 border border-red-500/25 hover:bg-red-500/25 transition-all flex items-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Try again
+                  {t("aiDesign.tryAgain")}
                 </button>
               </div>
             )}

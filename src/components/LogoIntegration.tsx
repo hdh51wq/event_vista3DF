@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { FurnitureItem, FALLBACK_FURNITURE_ITEMS } from "@/lib/furniture";
 import { applyLogoToFurniture } from "@/lib/applyLogoToFurniture";
 import { uploadImage } from "@/lib/uploadImageClient";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface LogoIntegrationProps {
   /** Called when the user finalises branding and wants to insert into the scene */
@@ -30,6 +31,7 @@ export default function LogoIntegration({
   onInsert,
   catalogItems = FALLBACK_FURNITURE_ITEMS,
 }: LogoIntegrationProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const { user, token } = useAuth();
@@ -95,7 +97,7 @@ export default function LogoIntegration({
     const validatePNG = (fileToCheck: File): Promise<string | null> => {
       return new Promise((resolve) => {
         if (fileToCheck.type !== "image/png") {
-          resolve("Please upload a PNG file only.");
+          resolve(t("logo.pngOnly"));
           return;
         }
         const img = new Image();
@@ -116,9 +118,7 @@ export default function LogoIntegration({
           }
           URL.revokeObjectURL(url);
           if (!hasTransparency) {
-            resolve(
-              "Image must have a transparent background (PNG-24). Please remove the background first."
-            );
+            resolve(t("logo.transparentRequired"));
           } else {
             resolve(null);
           }
@@ -144,7 +144,7 @@ export default function LogoIntegration({
       reader.readAsDataURL(file);
       e.target.value = "";
     });
-  }, []);
+  }, [t]);
 
   // Load selected furniture image to know natural dimensions
   useEffect(() => {
@@ -198,7 +198,7 @@ export default function LogoIntegration({
       })
       .catch(() => {
         if (renderVersionRef.current === version) {
-          setRenderError("Failed to render preview. Please try adjusting again.");
+          setRenderError(t("logo.renderFailed"));
         }
       })
       .finally(() => {
@@ -206,7 +206,7 @@ export default function LogoIntegration({
           setIsRendering(false);
         }
       });
-  }, [selectedFurniture, logoDataUrl, imageDims, sizePercent, opacity, logoXNorm, logoYNorm]);
+  }, [selectedFurniture, logoDataUrl, imageDims, sizePercent, opacity, logoXNorm, logoYNorm, t]);
 
   // Drag handlers over interactive furniture preview
   const handleLogoPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -267,7 +267,7 @@ export default function LogoIntegration({
       setOpen(false);
       reset();
     } catch {
-      setUploadErrorOnInsert("Failed to upload branded image. Please try again.");
+      setUploadErrorOnInsert(t("logo.uploadFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -282,10 +282,11 @@ export default function LogoIntegration({
     onInsert,
     reset,
     token,
+    t,
   ]);
 
   const currentStepLabel =
-    step === 1 ? "Upload Logo" : step === 2 ? "Select Furniture" : step === 3 ? "Adjust & Preview" : "Done";
+    step === 1 ? t("logo.stepUpload") : step === 2 ? t("logo.stepSelect") : step === 3 ? t("logo.stepAdjust") : t("logo.stepDone");
 
   return (
     <div className="relative">
@@ -313,15 +314,15 @@ export default function LogoIntegration({
             <Layers className="w-4 h-4" />
           </div>
           <div className="text-left">
-            <div className="font-bold text-[13px] leading-none mb-0.5">Logo Integration</div>
+            <div className="font-bold text-[13px] leading-none mb-0.5">{t("logo.title")}</div>
             <div className="text-[10px] font-medium text-white/70 leading-none">
-              {open ? "Click to collapse" : "Upload a logo and insert branded furniture"}
+              {open ? t("logo.collapse") : t("logo.subtitle")}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="bg-emerald-500/80 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-            Step {step <= 3 ? step : 3} of 3
+            {t("logo.step")} {step <= 3 ? step : 3} {t("logo.of3")}
           </span>
           <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
             <ChevronDown className="w-4 h-4 text-white/80" />
@@ -350,7 +351,7 @@ export default function LogoIntegration({
             <div className="px-4 pt-4 pb-2 border-b border-white/10 flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-bold text-emerald-300 uppercase tracking-widest">
-                  Logo Integration · {currentStepLabel}
+                  {t("logo.title")} · {currentStepLabel}
                 </p>
               </div>
               <button
@@ -370,8 +371,7 @@ export default function LogoIntegration({
               {step === 1 && (
                 <>
                   <p className="text-[11px] text-white/60">
-                    Upload your client&apos;s logo as a high‑quality PNG. You&apos;ll be able to place and size it on
-                    any catalogue furniture item.
+                    {t("logo.uploadIntro")}
                   </p>
                   <input
                     ref={fileInputRef}
@@ -385,8 +385,8 @@ export default function LogoIntegration({
                     className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-emerald-400/40 bg-white/5 hover:bg-white/10 transition-all py-6"
                   >
                     <Upload className="w-6 h-6 text-emerald-300" />
-                    <span className="text-[12px] font-semibold text-white/90">Upload PNG Logo</span>
-                    <span className="text-[10px] text-white/40">PNG only · Transparent background recommended</span>
+                    <span className="text-[12px] font-semibold text-white/90">{t("logo.uploadPng")}</span>
+                    <span className="text-[10px] text-white/40">{t("logo.pngNote")}</span>
                   </button>
                   {uploadError && <p className="text-[10px] text-red-400">{uploadError}</p>}
                 </>
@@ -398,13 +398,13 @@ export default function LogoIntegration({
                   <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
                     <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={logoDataUrl} alt="Logo preview" className="w-full h-full object-contain" />
+                      <img src={logoDataUrl} alt={t("logo.logoPreviewAlt")} className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[12px] font-semibold text-white truncate">
-                        {logoFileName || "Logo uploaded"}
+                        {logoFileName || t("logo.logoUploaded")}
                       </div>
-                      <div className="text-[10px] text-white/45">Step 2 of 3 · Choose furniture to brand</div>
+                      <div className="text-[10px] text-white/45">{t("logo.step2Choose")}</div>
                     </div>
                   </div>
 
@@ -413,7 +413,7 @@ export default function LogoIntegration({
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                          Default Furniture
+                          {t("logo.defaultFurniture")}
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2">
@@ -451,7 +451,7 @@ export default function LogoIntegration({
                           <div className="flex items-center gap-1.5">
                             <UserIcon className="w-3.5 h-3.5 text-emerald-300" />
                             <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                              My Custom Furniture
+                              {t("logo.myCustomFurniture")}
                             </span>
                           </div>
                         </div>
@@ -484,7 +484,7 @@ export default function LogoIntegration({
                       </div>
                     ) : (
                       <p className="text-[10px] text-white/35 leading-relaxed">
-                        Upload custom furniture from the Furniture panel to brand them here.
+                        {t("logo.customHint")}
                       </p>
                     )}
                   </div>
@@ -497,7 +497,7 @@ export default function LogoIntegration({
                       className="flex-none px-3 py-2 rounded-xl text-[11px] font-semibold text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center gap-1.5"
                     >
                       <X className="w-3.5 h-3.5" />
-                      Back
+                      {t("logo.back")}
                     </button>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -510,7 +510,7 @@ export default function LogoIntegration({
                         boxShadow: "0 4px 14px rgba(15,118,110,0.35)",
                       }}
                     >
-                      Next · Adjust placement
+                      {t("logo.nextAdjust")}
                     </motion.button>
                   </div>
                 </>
@@ -550,7 +550,7 @@ export default function LogoIntegration({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wider block mb-1.5">
-                          Size · {Math.round(sizePercent * 100)}%
+                          {t("logo.size")} · {Math.round(sizePercent * 100)}%
                         </label>
                         <div className="flex items-center gap-2">
                           <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-300" />
@@ -567,7 +567,7 @@ export default function LogoIntegration({
                       </div>
                       <div>
                         <label className="text-[10px] text-white/50 font-semibold uppercase tracking-wider block mb-1.5">
-                          Opacity · {Math.round(opacity * 100)}%
+                          {t("logo.opacity")} · {Math.round(opacity * 100)}%
                         </label>
                         <div className="flex items-center gap-2">
                           <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-300" />
@@ -586,10 +586,10 @@ export default function LogoIntegration({
 
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest">
-                        Live Preview
+                        {t("logo.livePreview")}
                       </span>
                       {isRendering && (
-                        <span className="text-[10px] text-emerald-300">Rendering…</span>
+                        <span className="text-[10px] text-emerald-300">{t("logo.rendering")}</span>
                       )}
                     </div>
 
@@ -599,7 +599,7 @@ export default function LogoIntegration({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={previewSrc}
-                            alt="Branded preview"
+                            alt={t("logo.brandedPreviewAlt")}
                             className="w-full h-full object-contain"
                           />
                         ) : (
@@ -611,7 +611,7 @@ export default function LogoIntegration({
                           {selectedFurniture.label}
                         </p>
                         <p className="text-[10px] text-white/45">
-                          Logo positioned manually · updates in real‑time as you drag or adjust
+                          {t("logo.positionHint")}
                         </p>
                       </div>
                     </div>
@@ -626,7 +626,7 @@ export default function LogoIntegration({
                         className="flex-none px-3 py-2 rounded-xl text-[11px] font-semibold text-white/50 hover:text-white/80 bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex items-center gap-1.5"
                       >
                         <X className="w-3.5 h-3.5" />
-                        Back
+                        {t("logo.back")}
                       </button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -640,7 +640,7 @@ export default function LogoIntegration({
                         }}
                       >
                         <CheckCircle2 className="w-4 h-4" />
-                        {isUploading ? "Uploading…" : "Apply & Insert into Scene"}
+                        {isUploading ? t("logo.uploading") : t("logo.applyInsert")}
                       </motion.button>
                     </div>
                   </div>
@@ -652,8 +652,7 @@ export default function LogoIntegration({
                 <div className="flex flex-col items-center justify-center py-6 gap-3">
                   <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                   <p className="text-[12px] text-white/80 text-center">
-                    Branded furniture has been inserted into the 360° scene. You can drag it to the
-                    exact position you want.
+                    {t("logo.doneMessage")}
                   </p>
                 </div>
               )}

@@ -51,6 +51,8 @@ function ModelCapture({
   )
 }
 
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 interface GLBThumbnailProps {
   glbPath: string
   width?: number
@@ -66,6 +68,7 @@ export function GLBThumbnail({
   className,
   style
 }: GLBThumbnailProps) {
+  const { t } = useLanguage();
   const [thumbnail, setThumbnail] = useState<string | null>(null)
 
   if (thumbnail) {
@@ -76,7 +79,7 @@ export function GLBThumbnail({
         height={height}
         className={className}
         style={{ objectFit: 'contain', ...style }}
-        alt="3D furniture preview"
+        alt={t("glb.alt")}
       />
     )
   }
