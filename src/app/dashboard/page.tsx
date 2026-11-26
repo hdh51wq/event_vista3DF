@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import VenueSelector from "@/components/VenueSelector";
 import { sceneThumb, type TemplateScene } from "@/lib/scenes";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,6 +144,7 @@ function StatCard({ title, value, change, icon: Icon, color, prefix = "" }: {
   title: string; value: number; change: number;
   icon: React.ElementType; color: "blue"|"green"|"yellow"|"purple"; prefix?: string;
 }) {
+  const { t } = useLanguage();
   const borderColor = { blue:"border-l-blue-500", green:"border-l-emerald-500", yellow:"border-l-amber-500", purple:"border-l-purple-500" }[color];
   const iconBg      = { 
     blue:"bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400", 
@@ -162,7 +164,7 @@ function StatCard({ title, value, change, icon: Icon, color, prefix = "" }: {
         <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{prefix}{value.toLocaleString()}</p>
         <div className={cn("flex items-center gap-1 mt-1 text-xs font-medium", isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400")}>
           {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-          {isPositive ? "+" : ""}{change}% vs last month
+          {isPositive ? "+" : ""}{change}% {t("dash.vsLastMonth")}
         </div>
       </div>
     </motion.div>
@@ -170,11 +172,12 @@ function StatCard({ title, value, change, icon: Icon, color, prefix = "" }: {
 }
 
 function StatusBadge({ status }: { status: Status }) {
+  const { t } = useLanguage();
   const cfg = STATUS_CONFIG[status];
   return (
     <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider", cfg.bg, cfg.text)}>
       <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
-      {cfg.label}
+      {status === "Draft" ? t("dash.statusDraft") : status === "In Progress" ? t("dash.statusInProgress") : status === "Review" ? t("dash.statusReview") : t("dash.statusFinal")}
     </span>
   );
 }
@@ -182,6 +185,7 @@ function StatusBadge({ status }: { status: Status }) {
 function ThreeDotsMenu({ onEdit, onDuplicate, onDelete }: {
   onEdit: () => void; onDuplicate: () => void; onDelete: () => void;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -203,16 +207,16 @@ function ThreeDotsMenu({ onEdit, onDuplicate, onDelete }: {
               onClick={e => e.stopPropagation()}>
               <button onClick={() => { onEdit(); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                <Pencil className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> Edit
+                <Pencil className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> {t("dash.edit")}
               </button>
               <button onClick={() => { onDuplicate(); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                <Copy className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> Duplicate
+                <Copy className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> {t("dash.duplicate")}
               </button>
               <div className="border-t border-zinc-100 dark:border-zinc-800 my-1" />
               <button onClick={() => { onDelete(); setOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2 text-red-500">
-                <Trash2 className="w-3.5 h-3.5" /> Delete
+                <Trash2 className="w-3.5 h-3.5" /> {t("dash.delete")}
               </button>
             </motion.div>
         )}
@@ -245,7 +249,10 @@ function ProjectFormFields({ form, setForm, minDate }: {
   // original date, even if it is in the past.
   minDate?: string;
 }) {
+  const { t } = useLanguage();
   const set = (key: keyof ProjectForm) => (val: string) => setForm(f => ({ ...f, [key]: val }));
+  const statusLabel = (s: Status) => s === "Draft" ? t("dash.statusDraft") : s === "In Progress" ? t("dash.statusInProgress") : s === "Review" ? t("dash.statusReview") : t("dash.statusFinal");
+  const billingLabel = (s: BillingStatus) => s === "pending" ? t("dash.billingPending") : s === "paid" ? t("dash.billingPaid") : t("dash.billingCancelled");
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -253,9 +260,9 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Project Name */}
       <div className="space-y-2 md:col-span-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <Tag className="w-3 h-3" /> Project Name *
+          <Tag className="w-3 h-3" /> {t("dash.projectName")} *
         </label>
-        <input required type="text" placeholder="e.g. Summer Gala 2026"
+        <input required type="text" placeholder={t("dash.projectNamePlaceholder")}
           className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
           value={form.name} onChange={e => set("name")(e.target.value)} />
       </div>
@@ -263,9 +270,9 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Client */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <User className="w-3 h-3" /> Client
+          <User className="w-3 h-3" /> {t("dash.client")}
         </label>
-        <input type="text" placeholder="Client name"
+        <input type="text" placeholder={t("dash.clientPlaceholder")}
           className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
           value={form.client} onChange={e => set("client")(e.target.value)} />
       </div>
@@ -273,9 +280,9 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Event Name */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <Calendar className="w-3 h-3" /> Event Name
+          <Calendar className="w-3 h-3" /> {t("dash.eventName")}
         </label>
-        <input type="text" placeholder="Event type or title"
+        <input type="text" placeholder={t("dash.eventNamePlaceholder")}
           className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
           value={form.event} onChange={e => set("event")(e.target.value)} />
       </div>
@@ -283,9 +290,9 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Location */}
       <div className="space-y-2 md:col-span-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <MapPin className="w-3 h-3" /> Location
+          <MapPin className="w-3 h-3" /> {t("dash.location")}
         </label>
-        <input type="text" placeholder="Venue address or city"
+        <input type="text" placeholder={t("dash.locationPlaceholder")}
           className="w-full px-5 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
           value={form.location} onChange={e => set("location")(e.target.value)} />
       </div>
@@ -293,7 +300,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Event Type */}
       <div className="space-y-2 md:col-span-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <Briefcase className="w-3 h-3" /> Event Type *
+          <Briefcase className="w-3 h-3" /> {t("dash.eventType")} *
         </label>
         <div className="relative">
           <select
@@ -303,11 +310,12 @@ function ProjectFormFields({ form, setForm, minDate }: {
             className="w-full px-4 pr-9 py-3.5 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 cursor-pointer"
           >
             <option value="" disabled>
-              Select event type...
+              {t("dash.selectEventType")}
             </option>
             {EVENT_TYPES.map((et) => (
               <option key={et.value} value={et.value}>
-                {et.label}
+                {et.value === "Wedding" ? "💍 " : et.value === "Gala Dinner" ? "🥂 " : "🎤 "}
+                {et.value === "Wedding" ? t("dash.eventWedding") : et.value === "Gala Dinner" ? t("dash.eventGalaDinner") : t("dash.eventConference")}
               </option>
             ))}
           </select>
@@ -318,7 +326,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Event Date */}
       <div className="space-y-2 md:col-span-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <Calendar className="w-3 h-3" /> Event Date *
+          <Calendar className="w-3 h-3" /> {t("dash.eventDate")} *
         </label>
         <input
           type="date"
@@ -333,7 +341,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Status */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <Zap className="w-3 h-3" /> Status
+          <Zap className="w-3 h-3" /> {t("dash.status")}
         </label>
         <div className="grid grid-cols-2 gap-2">
           {STATUSES.map(s => {
@@ -348,7 +356,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
                     : "bg-zinc-50 dark:bg-zinc-800 border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 hover:border-zinc-200 dark:hover:border-zinc-700"
                 )}>
                 <span className={cn("w-2 h-2 rounded-full shrink-0", active ? cfg.dot : "bg-zinc-300 dark:bg-zinc-700")} />
-                {s}
+                {statusLabel(s)}
               </button>
             );
           })}
@@ -358,7 +366,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Budget + Currency */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <DollarSign className="w-3 h-3" /> Budget
+          <DollarSign className="w-3 h-3" /> {t("dash.budget")}
         </label>
         <div className="flex gap-2">
           <div className="relative">
@@ -377,7 +385,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
       {/* Billing Status */}
       <div className="space-y-2">
         <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-          <CreditCard className="w-3 h-3" /> Billing Status
+          <CreditCard className="w-3 h-3" /> {t("dash.billingStatus")}
         </label>
         <div className="flex gap-2">
           {(["pending","paid","cancelled"] as BillingStatus[]).map(s => {
@@ -390,7 +398,7 @@ function ProjectFormFields({ form, setForm, minDate }: {
                     ? `${cfg.bg} ${cfg.border} ${cfg.text} dark:bg-opacity-20`
                     : "bg-transparent border-zinc-200 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 hover:border-zinc-300 dark:hover:border-zinc-700"
                 )}>
-                {s}
+                {billingLabel(s)}
               </button>
             );
           })}
@@ -410,6 +418,7 @@ function ModalShell({
   onSubmit: (e: React.FormEvent) => void; submitLabel: string;
   loading: boolean; children: React.ReactNode;
 }) {
+  const { t } = useLanguage();
   return (
     <AnimatePresence>
       {open && (
@@ -434,11 +443,11 @@ function ModalShell({
                 <div className="flex items-center gap-4 pt-2">
                   <button type="button" disabled={loading} onClick={onClose}
                     className="flex-1 px-6 py-4 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 rounded-2xl font-semibold transition-all">
-                    Cancel
+                    {t("dash.cancel")}
                   </button>
                   <button type="submit" disabled={loading}
                     className="flex-[2] btn-primary py-4 text-base shadow-lg shadow-coral-100 dark:shadow-none disabled:opacity-50">
-                    {loading ? "Saving…" : submitLabel}
+                    {loading ? t("dash.saving") : submitLabel}
                   </button>
                 </div>
               </form>
@@ -452,6 +461,7 @@ function ModalShell({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { isLoggedIn, loading: authLoading, projects, fetchProjects, createProject, updateProject, deleteProject } = useAuth();
 
@@ -545,7 +555,7 @@ export default function DashboardPage() {
       });
       setIsCreateOpen(false);
       setCreateForm(EMPTY_FORM);
-      toast.success("Project created!");
+      toast.success(t("dash.projectCreated"));
       if (created?._id) {
         setVenueSelectorProject({
           id: created._id,
@@ -574,7 +584,7 @@ export default function DashboardPage() {
         currency: editForm.currency, billingStatus: editForm.billingStatus,
       });
       setEditProject(null);
-      toast.success("Project updated!");
+      toast.success(t("dash.projectUpdated"));
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -588,7 +598,7 @@ export default function DashboardPage() {
     try {
       await deleteProject(deleteTarget._id);
       setDeleteTarget(null);
-      toast.success("Project deleted");
+      toast.success(t("dash.projectDeleted"));
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -600,13 +610,13 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       await createProject({
-        name: `${project.name} (Copy)`,
+        name: `${project.name} (${t("dash.copySuffix")})`,
         client: project.client, event: project.event,
         eventType: project.eventType, location: project.location,
         status: "Draft", budget: project.budget,
         currency: project.currency, billingStatus: "pending",
       });
-      toast.success("Project duplicated!");
+      toast.success(t("dash.projectDuplicated"));
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -619,7 +629,7 @@ export default function DashboardPage() {
     const newStatus: Status = project.status === "In Progress" ? "Draft" : "In Progress";
     try {
       await updateProject(project._id, { status: newStatus });
-      toast.success(newStatus === "In Progress" ? "Marked as Active!" : "Marked as Draft");
+      toast.success(newStatus === "In Progress" ? t("dash.markedActive") : t("dash.markedDraft"));
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -636,7 +646,7 @@ export default function DashboardPage() {
         sceneCount: 1,
         thumbnail: sceneThumb(scene.src),
       });
-      toast.success("Scene selected");
+      toast.success(t("dash.sceneSelected"));
       setVenueSelectorProject(null);
       router.push(`/editor?id=${venueSelectorProject.id}`);
     } catch (err: any) {
@@ -660,21 +670,21 @@ export default function DashboardPage() {
       <motion.header initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
         className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">Project Dashboard</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1">Manage and design your immersive event scénographies</p>
+          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("dash.dashboardTitle")}</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-1">{t("dash.dashboardSubtitle")}</p>
         </div>
         <button onClick={() => setIsCreateOpen(true)} className="btn-primary flex items-center gap-2 self-start md:self-auto">
-          <Plus className="w-4 h-4" /> New Project
+          <Plus className="w-4 h-4" /> {t("dash.newProject")}
         </button>
       </motion.header>
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
         {[
-          { title:"Total Projects",      ...stats.total,   icon:FolderOpen,  color:"blue"   as const },
-          { title:"Active Events",       ...stats.active,  icon:Layers,      color:"green"  as const },
-          { title:"This Month's Revenue", value:stats.revenue.value, change:stats.revenue.change, icon:BarChart2, color:"purple" as const, prefix:"$" },
-          { title:"Pending Proposals",   ...stats.pending, icon:FileText,    color:"yellow" as const },
+          { title: t("dash.totalProjects"),      ...stats.total,   icon:FolderOpen,  color:"blue"   as const },
+          { title: t("dash.activeEvents"),       ...stats.active,  icon:Layers,      color:"green"  as const },
+          { title: t("dash.monthRevenue"), value:stats.revenue.value, change:stats.revenue.change, icon:BarChart2, color:"purple" as const, prefix:"$" },
+          { title: t("dash.pendingProposals"),   ...stats.pending, icon:FileText,    color:"yellow" as const },
         ].map((card, i) => (
           <motion.div key={card.title} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.07 }}>
             <StatCard {...card} />
@@ -687,11 +697,11 @@ export default function DashboardPage() {
         className="flex flex-wrap gap-3">
           <Link href="/templates"
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm">
-            <FolderOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> Templates
+            <FolderOpen className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> {t("dash.templates")}
           </Link>
           <Link href="/analytics"
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm">
-            <BarChart2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> Analytics
+            <BarChart2 className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /> {t("dash.analytics")}
           </Link>
           <button
             onClick={() => { setShowArchived(v => !v); setStatusFilter(""); }}
@@ -701,7 +711,7 @@ export default function DashboardPage() {
                 ? "bg-coral-50 border-coral-300 text-coral-600 dark:bg-coral-950/20 dark:border-coral-800 dark:text-coral-400"
                 : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
             )}>
-            <Archive className="w-4 h-4" /> {showArchived ? "Showing Archived" : "Archived"}
+            <Archive className="w-4 h-4" /> {showArchived ? t("dash.showingArchived") : t("dash.archived")}
           </button>
         </motion.div>
 
@@ -711,7 +721,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-              <input type="text" placeholder="Search by name, client, event, location…"
+              <input type="text" placeholder={t("dash.searchPlaceholder")}
                 value={searchRaw} onChange={e => setSearchRaw(e.target.value)}
                 className="w-full pl-9 pr-9 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all" />
               {searchRaw && (
@@ -721,7 +731,16 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
-            <SelectDropdown value={sort} onChange={setSort} options={SORT_OPTIONS} />
+            <SelectDropdown value={sort} onChange={setSort} options={SORT_OPTIONS.map((o) => ({
+              value: o.value,
+              label:
+                o.value === "updatedAt_desc" ? t("dash.sortUpdatedDesc")
+                : o.value === "updatedAt_asc" ? t("dash.sortUpdatedAsc")
+                : o.value === "name_asc" ? t("dash.sortNameAsc")
+                : o.value === "name_desc" ? t("dash.sortNameDesc")
+                : o.value === "createdAt_desc" ? t("dash.sortCreatedDesc")
+                : t("dash.sortCreatedAsc"),
+            }))} />
             <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl self-start">
               <button onClick={() => setView("grid")}
                 className={cn("p-1.5 rounded-lg transition-all", view==="grid" ? "bg-white dark:bg-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300")}>
@@ -737,21 +756,21 @@ export default function DashboardPage() {
           <div className="flex flex-wrap gap-3 items-center">
             <SelectDropdown value={statusFilter} onChange={v => { setStatusFilter(v); setShowArchived(false); }}
               options={[
-                { value:"Draft", label:"Draft" }, { value:"In Progress", label:"In Progress" },
-                { value:"Review", label:"Review" }, { value:"Final", label:"Final" },
+                { value:"Draft", label: t("dash.statusDraft") }, { value:"In Progress", label: t("dash.statusInProgress") },
+                { value:"Review", label: t("dash.statusReview") }, { value:"Final", label: t("dash.statusFinal") },
               ] as { value: Status; label: string }[]}
-              placeholder="All Statuses" />
+              placeholder={t("dash.allStatuses")} />
             <SelectDropdown value={eventTypeFilter} onChange={setEventTypeFilter}
                options={[
-                 { value:"Wedding", label:"💍 Wedding" },
-                 { value:"Conference", label:"🎤 Conference" },
-                 { value:"Gala Dinner", label:"✨ Gala Dinner" },
+                 { value:"Wedding", label: `💍 ${t("dash.eventWedding")}` },
+                 { value:"Conference", label: `🎤 ${t("dash.eventConference")}` },
+                 { value:"Gala Dinner", label: `✨ ${t("dash.eventGalaDinner")}` },
                ] as { value: EventType; label: string }[]}
-               placeholder="All Types" />
+               placeholder={t("dash.allTypes")} />
             <div className="flex items-center gap-2">
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-coral-200" />
-              <span className="text-zinc-400 dark:text-zinc-500 text-sm">to</span>
+              <span className="text-zinc-400 dark:text-zinc-500 text-sm">{t("dash.to")}</span>
               <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm text-zinc-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-coral-200" />
             </div>
@@ -759,11 +778,11 @@ export default function DashboardPage() {
               <button
                 onClick={() => { setStatusFilter(""); setEventTypeFilter(""); setDateFrom(""); setDateTo(""); setSearchRaw(""); setShowArchived(false); }}
                 className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-coral-500 hover:text-coral-600 hover:bg-coral-50 dark:hover:bg-coral-950/20 rounded-xl transition-colors">
-                <X className="w-3 h-3" /> Clear filters
+                <X className="w-3 h-3" /> {t("dash.clearFilters")}
               </button>
             )}
             <span className="ml-auto text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-              {visibleProjects.length} project{visibleProjects.length !== 1 ? "s" : ""}
+              {visibleProjects.length} {visibleProjects.length === 1 ? t("dash.project") : t("dash.projects")}
             </span>
           </div>
       </motion.div>
@@ -775,8 +794,8 @@ export default function DashboardPage() {
           <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4">
             <Search className="w-7 h-7 text-zinc-400" />
           </div>
-            <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-1">No results found</p>
-            <p className="text-sm text-zinc-400 dark:text-zinc-500">Try adjusting your search or filters</p>
+            <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-300 mb-1">{t("dash.noResults")}</p>
+            <p className="text-sm text-zinc-400 dark:text-zinc-500">{t("dash.adjustFilters")}</p>
           </motion.div>
         ) : view === "grid" ? (
           <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -796,7 +815,7 @@ export default function DashboardPage() {
                   {/* Active Event toggle pill */}
                   <button
                     onClick={e => { e.stopPropagation(); handleToggleActive(project); }}
-                    title={project.status === "In Progress" ? "Mark as Draft" : "Mark as Active"}
+                    title={project.status === "In Progress" ? t("dash.markAsDraft") : t("dash.markAsActive")}
                     className={cn(
                       "absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border transition-all",
                       project.status === "In Progress"
@@ -804,13 +823,13 @@ export default function DashboardPage() {
                         : "bg-white/80 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                     )}>
                     <Zap className="w-2.5 h-2.5" />
-                    {project.status === "In Progress" ? "Active" : "Set Active"}
+                    {project.status === "In Progress" ? t("dash.active") : t("dash.setActive")}
                   </button>
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Link href={`/editor?id=${project._id}`}
                       className="btn-primary py-2 px-5 text-sm" onClick={e => e.stopPropagation()}>
-                      Open Editor
+                      {t("dash.openEditor")}
                     </Link>
                   </div>
                 </div>
@@ -824,7 +843,7 @@ export default function DashboardPage() {
                         <button 
                           onClick={(e) => { e.stopPropagation(); setDeleteTarget(project); }}
                           className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-zinc-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
-                          title="Delete Project"
+                          title={t("dash.deleteProject")}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -852,7 +871,7 @@ export default function DashboardPage() {
                           })}
                         </span>
                       ) : (
-                        <span>No date set</span>
+                        <span>{t("dash.noDateSet")}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-1 ml-auto">
@@ -870,8 +889,8 @@ export default function DashboardPage() {
               <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800/50 rounded-full flex items-center justify-center mb-3 group-hover:bg-coral-100 dark:group-hover:bg-coral-900/30 transition-colors">
                 <Plus className="w-6 h-6 text-zinc-400 dark:text-zinc-500 group-hover:text-coral-500" />
               </div>
-              <p className="font-semibold text-zinc-600 dark:text-zinc-300 group-hover:text-coral-600 transition-colors text-sm">Create New</p>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Start a fresh project</p>
+              <p className="font-semibold text-zinc-600 dark:text-zinc-300 group-hover:text-coral-600 transition-colors text-sm">{t("dash.createNew")}</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">{t("dash.startFresh")}</p>
             </motion.div>
           </motion.div>
       ) : (
@@ -880,7 +899,7 @@ export default function DashboardPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/60">
-                {["Name","Client","Event","Updated","Status","Active","Actions"].map(col => (
+                {[t("dash.colName"), t("dash.colClient"), t("dash.event"), t("dash.updated"), t("dash.status"), t("dash.active"), t("dash.actions")].map(col => (
                   <th key={col} className="px-5 py-3.5 text-left text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">{col}</th>
                 ))}
               </tr>
@@ -896,7 +915,7 @@ export default function DashboardPage() {
                       <div>
                         <p className="font-semibold text-zinc-800 dark:text-zinc-100 group-hover:text-coral-500 transition-colors">{project.name}</p>
                         <p className="text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1 mt-0.5">
-                          <Layers className="w-3 h-3" /> {project.sceneCount ?? 0} scenes
+                          <Layers className="w-3 h-3" /> {project.sceneCount ?? 0} {t("dash.scenes")}
                         </p>
                       </div>
                     </div>
@@ -914,7 +933,7 @@ export default function DashboardPage() {
                         })}
                       </>
                     ) : (
-                      "📅 No date set"
+                      <>📅 {t("dash.noDateSet")}</>
                     )}
                   </td>
                   <td className="px-5 py-4"><StatusBadge status={project.status} /></td>
@@ -928,18 +947,18 @@ export default function DashboardPage() {
                           : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-blue-300 hover:text-blue-500"
                       )}>
                       <Zap className="w-3 h-3" />
-                      {project.status === "In Progress" ? "Active" : "Inactive"}
+                      {project.status === "In Progress" ? t("dash.active") : t("dash.inactive")}
                     </button>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
                       <Link href={`/editor?id=${project._id}`}
-                        className="text-xs font-medium text-coral-500 hover:text-coral-600 hover:underline">Open</Link>
+                        className="text-xs font-medium text-coral-500 hover:text-coral-600 hover:underline">{t("dash.open")}</Link>
                       <div className="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 mx-1" />
                       <button 
                         onClick={(e) => { e.stopPropagation(); setDeleteTarget(project); }}
                         className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-zinc-400 dark:text-zinc-500 hover:text-red-500 transition-colors"
-                        title="Delete Project"
+                        title={t("dash.deleteProject")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -959,15 +978,15 @@ export default function DashboardPage() {
 
       {/* ── Create Modal ── */}
       <ModalShell open={isCreateOpen} onClose={() => { setIsCreateOpen(false); setCreateForm(EMPTY_FORM); }}
-        title="Create New Project" subtitle="Set up your event workspace"
-        onSubmit={handleCreate} submitLabel="Create Project" loading={loading}>
+        title={t("dash.createProjectTitle")} subtitle={t("dash.createProjectSubtitle")}
+        onSubmit={handleCreate} submitLabel={t("dash.createProject")} loading={loading}>
         <ProjectFormFields form={createForm} setForm={setCreateForm} minDate={new Date().toISOString().split("T")[0]} />
       </ModalShell>
 
       {/* ── Edit Modal ── */}
       <ModalShell open={!!editProject} onClose={() => setEditProject(null)}
-        title="Edit Project" subtitle={editProject?.name ?? ""}
-        onSubmit={handleEdit} submitLabel="Save Changes" loading={loading}>
+        title={t("dash.editProjectTitle")} subtitle={editProject?.name ?? ""}
+        onSubmit={handleEdit} submitLabel={t("dash.saveChanges")} loading={loading}>
         <ProjectFormFields form={editForm} setForm={setEditForm} />
       </ModalShell>
 
@@ -984,18 +1003,18 @@ export default function DashboardPage() {
               <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-6 h-6 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-zinc-900 mb-1">Delete Project?</h3>
+              <h3 className="text-lg font-bold text-zinc-900 mb-1">{t("dash.deleteProjectTitle")}</h3>
               <p className="text-sm text-zinc-500 mb-6">
-                <span className="font-semibold text-zinc-700">"{deleteTarget.name}"</span> will be permanently deleted. This cannot be undone.
+                <span className="font-semibold text-zinc-700">"{deleteTarget.name}"</span> {t("dash.deleteConfirmDeleted")} {t("dash.deleteConfirmUndone")}
               </p>
               <div className="flex gap-3">
                 <button onClick={() => setDeleteTarget(null)}
                   className="flex-1 px-4 py-3 bg-zinc-50 hover:bg-zinc-100 text-zinc-600 rounded-2xl font-semibold transition-all text-sm">
-                  Cancel
+                  {t("dash.cancel")}
                 </button>
                 <button onClick={handleDelete} disabled={loading}
                   className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-semibold transition-all text-sm disabled:opacity-50">
-                  {loading ? "Deleting…" : "Delete"}
+                  {loading ? t("dash.deleting") : t("dash.delete")}
                 </button>
               </div>
             </motion.div>
