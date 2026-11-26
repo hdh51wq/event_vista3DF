@@ -4,9 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Box, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export default function LoginPage() {
   const { login, signup } = useAuth();
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,13 +24,13 @@ export default function LoginPage() {
     try {
       if (isLogin) {
         await login(email, password);
-        setFeedback({ type: "success", message: "Welcome back! Redirecting..." });
+        setFeedback({ type: "success", message: t("login.welcomeBackMsg") });
       } else {
         await signup(name, email, password);
-        setFeedback({ type: "success", message: "Account created! Redirecting..." });
+        setFeedback({ type: "success", message: t("login.accountCreatedMsg") });
       }
     } catch (error: any) {
-      setFeedback({ type: "error", message: error.message || "Something went wrong. Please try again." });
+      setFeedback({ type: "error", message: error.message || t("login.genericError") });
     } finally {
       setLoading(false);
     }
@@ -40,6 +43,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="fixed top-6 right-6 z-50">
+        <LanguageSwitcher />
+      </div>
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-from),_transparent_50%),_radial-gradient(circle_at_bottom_left,_var(--tw-gradient-to),_transparent_50%)] from-coral-50/50 to-peach-50/50 dark:from-zinc-900/50 dark:to-zinc-800/50 opacity-100" />
       
       <motion.div
@@ -54,32 +60,32 @@ export default function LoginPage() {
               <Box className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight mb-2">
-              {isLogin ? "Welcome Back" : "Join EventVista"}
+              {isLogin ? t("login.welcomeBack") : t("login.joinEventVista")}
             </h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm text-center">
-              {isLogin 
-                ? "Enter your credentials to access your event dashboard" 
-                : "Create an account to start designing your immersive events"}
+              {isLogin
+                ? t("login.loginSubtitle")
+                : t("login.signupSubtitle")}
             </p>
           </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {!isLogin && (
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Full Name</label>
+                  <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{t("login.fullName")}</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
+                    placeholder={t("login.fullNamePlaceholder")}
                     className="w-full px-5 py-3.5 bg-white dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-coral-200 transition-all text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                   />
                 </div>
               )}
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Email Address</label>
+                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{t("login.emailAddress")}</label>
                 <input
                   type="email"
                   required
@@ -91,7 +97,7 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">Password</label>
+                <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">{t("login.password")}</label>
                 <input
                   type="password"
                   required
@@ -130,7 +136,7 @@ export default function LoginPage() {
                 disabled={loading}
                 className="btn-primary w-full py-4 text-base flex items-center justify-center gap-2 group mt-4 disabled:opacity-50 shadow-lg shadow-coral-100 dark:shadow-none"
               >
-                {loading ? "Processing..." : (isLogin ? "Login" : "Create Account")}
+                {loading ? t("login.processing") : (isLogin ? t("login.loginBtn") : t("login.createAccountBtn"))}
                 {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
               </button>
             </form>
@@ -140,7 +146,7 @@ export default function LoginPage() {
                 onClick={switchMode}
                 className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-coral-500 transition-colors"
               >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
+                {isLogin ? t("login.switchToSignup") : t("login.switchToLogin")}
               </button>
             </div>
         </div>
