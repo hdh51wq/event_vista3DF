@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BarChart3, RefreshCw, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { RevenueChart } from "@/components/analytics/RevenueChart";
 import { RevenueByEventType } from "@/components/analytics/RevenueByEventType";
 import { ProjectsOverview } from "@/components/analytics/ProjectsOverview";
@@ -40,6 +41,7 @@ function SectionSkeleton() {
 export default function AnalyticsPage() {
   const router = useRouter();
   const { isLoggedIn, loading: authLoading, token, projects } = useAuth();
+  const { t } = useLanguage();
 
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function AnalyticsPage() {
       const res = await fetch(`/api/analytics?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.json()).error || "Failed to load analytics");
+      if (!res.ok) throw new Error((await res.json()).error || t("analyticsPage.failedToLoadAnalytics"));
       const json: AnalyticsData = await res.json();
       setData(json);
     } catch (err: any) {
@@ -95,7 +97,7 @@ export default function AnalyticsPage() {
   const handleExportCSV = () => {
     if (!data) return;
     const rows = [
-      ["Month", "Revenue", "Projects"],
+      [t("analyticsPage.csvMonth"), t("analyticsPage.csvRevenue"), t("analyticsPage.csvProjects")],
       ...data.trends.seasonalData.map(d => [d.month, d.revenue, d.projects]),
     ];
     const csv = rows.map(r => r.join(",")).join("\n");
@@ -124,8 +126,8 @@ export default function AnalyticsPage() {
           <BarChart3 className="w-5 h-5 text-coral-500" />
         </div>
         <div>
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">Analytics</h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">Insights and performance metrics for your agency</p>
+          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t("analyticsPage.title")}</h1>
+          <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">{t("analyticsPage.subtitle")}</p>
         </div>
       </div>
       <button
@@ -134,7 +136,7 @@ export default function AnalyticsPage() {
         className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all shadow-sm disabled:opacity-50 self-start md:self-auto"
       >
           <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
+          {t("analyticsPage.refresh")}
         </button>
       </motion.header>
 
@@ -158,11 +160,11 @@ export default function AnalyticsPage() {
         >
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
           <div className="flex-1">
-            <p className="font-semibold text-zinc-800">Failed to load analytics</p>
+            <p className="font-semibold text-zinc-800">{t("analyticsPage.failedToLoadAnalytics")}</p>
             <p className="text-sm text-zinc-500">{error}</p>
           </div>
           <button onClick={fetchData} className="btn-primary text-sm py-2 px-4">
-            Retry
+            {t("analyticsPage.retry")}
           </button>
         </motion.div>
       )}
@@ -192,7 +194,7 @@ export default function AnalyticsPage() {
 
           {/* Revenue Section */}
           <section>
-            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">Revenue</p>
+            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">{t("analyticsPage.revenue")}</p>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 <RevenueChart
@@ -207,7 +209,7 @@ export default function AnalyticsPage() {
 
           {/* Projects Section */}
           <section>
-            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">Projects</p>
+            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">{t("analyticsPage.projects")}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ProjectsOverview data={data.projects} />
               <ProjectsTrend
@@ -221,13 +223,13 @@ export default function AnalyticsPage() {
 
           {/* Performance Section */}
           <section>
-            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">Performance</p>
+            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">{t("analyticsPage.performance")}</p>
             <PerformanceMetrics data={data} />
           </section>
 
           {/* Clients Section */}
           <section>
-            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">Clients</p>
+            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">{t("analyticsPage.clients")}</p>
             <TopClients clients={data.clients.topClients} />
             <div className="mt-6">
               <ClientInsights data={data.clients} />
@@ -236,7 +238,7 @@ export default function AnalyticsPage() {
 
           {/* Budget & Seasonal */}
           <section>
-            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">Budget & Seasonality</p>
+            <p className="text-xs font-bold text-zinc-300 dark:text-zinc-600 uppercase tracking-widest mb-3 pl-1">{t("analyticsPage.budgetSeasonality")}</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <BudgetAnalysis data={data.budget} />
               <SeasonalTrends
@@ -261,8 +263,8 @@ export default function AnalyticsPage() {
           <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4">
             <BarChart3 className="w-7 h-7 text-zinc-400" />
           </div>
-          <p className="text-lg font-semibold text-zinc-700 mb-1">No data for this period</p>
-          <p className="text-sm text-zinc-400">Create some projects or adjust the date range to see analytics</p>
+          <p className="text-lg font-semibold text-zinc-700 mb-1">{t("analyticsPage.noData")}</p>
+          <p className="text-sm text-zinc-400">{t("analyticsPage.noDataHint")}</p>
         </motion.div>
       )}
 
