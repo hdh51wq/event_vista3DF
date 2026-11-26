@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import type { EventTypeData } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const TYPE_COLORS: Record<string, string> = {
   Corporate:  "#3B82F6",
@@ -19,13 +20,14 @@ interface Props {
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
+  const { t } = useLanguage();
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div className="bg-white border border-zinc-100 rounded-xl shadow-lg p-3 text-sm">
       <p className="font-bold text-zinc-800">{d.type}</p>
       <p className="text-zinc-500">${d.amount.toLocaleString()}</p>
-      <p className="text-zinc-400">{d.percentage}% of total</p>
+      <p className="text-zinc-400">{d.percentage}% {t("anComp.ofTotal")}</p>
     </div>
   );
 };
@@ -44,10 +46,11 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 };
 
 export function RevenueByEventType({ data }: Props) {
+  const { t } = useLanguage();
   if (!data.length) {
     return (
       <div className="glass-card p-6 flex items-center justify-center h-full min-h-[280px]">
-        <p className="text-zinc-400 text-sm">No data available</p>
+        <p className="text-zinc-400 text-sm">{t("anComp.noData")}</p>
       </div>
     );
   }
@@ -59,7 +62,7 @@ export function RevenueByEventType({ data }: Props) {
       transition={{ delay: 0.1 }}
       className="glass-card p-6"
     >
-      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">Revenue by Event Type</p>
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4">{t("anComp.revenueByEventType")}</p>
 
       <ResponsiveContainer width="100%" height={200}>
         <PieChart>

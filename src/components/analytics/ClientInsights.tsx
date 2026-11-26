@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Users, UserPlus, RefreshCw } from "lucide-react";
 import type { ClientAnalytics } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const INDUSTRY_COLORS = ["#ff856a","#3B82F6","#8B5CF6","#10B981","#f59e0b","#6B7280"];
 
@@ -23,6 +24,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export function ClientInsights({ data }: Props) {
+  const { t } = useLanguage();
   const retentionRate = data.total > 0
     ? Math.round((data.returning / data.total) * 100)
     : 0;
@@ -34,13 +36,13 @@ export function ClientInsights({ data }: Props) {
       transition={{ delay: 0.25 }}
       className="glass-card p-6"
     >
-      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">Client Insights</p>
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">{t("anComp.clientInsights")}</p>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Total Clients", value: data.total, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "New Clients", value: data.new, icon: UserPlus, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "Retention Rate", value: `${retentionRate}%`, icon: RefreshCw, color: "text-purple-600", bg: "bg-purple-50" },
+          { label: t("anComp.totalClients"), value: data.total, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: t("anComp.newClients"), value: data.new, icon: UserPlus, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: t("anComp.retentionRate"), value: `${retentionRate}%`, icon: RefreshCw, color: "text-purple-600", bg: "bg-purple-50" },
         ].map((m) => (
           <div key={m.label} className="text-center">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2 ${m.bg}`}>
@@ -54,7 +56,7 @@ export function ClientInsights({ data }: Props) {
 
       {data.byIndustry.length > 0 && (
         <>
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">By Event Type</p>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">{t("anComp.byEventType")}</p>
           <div className="flex items-center gap-4">
             <ResponsiveContainer width={120} height={120}>
               <PieChart>

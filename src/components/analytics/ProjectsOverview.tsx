@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { FolderOpen, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import type { ProjectAnalytics } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const STATUS_COLORS: Record<string, string> = {
   Draft:         "#a1a1aa",
@@ -19,22 +20,24 @@ interface Props {
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
+  const { t } = useLanguage();
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div className="bg-white border border-zinc-100 rounded-xl shadow-lg p-3 text-sm">
       <p className="font-bold text-zinc-800">{d.status}</p>
-      <p className="text-zinc-500">{d.count} projects</p>
+      <p className="text-zinc-500">{d.count} {t("anComp.projects")}</p>
     </div>
   );
 };
 
 export function ProjectsOverview({ data }: Props) {
+  const { t } = useLanguage();
   const metrics = [
-    { label: "Total Projects",    value: data.total,          icon: FolderOpen,    color: "text-blue-600",    bg: "bg-blue-50" },
-    { label: "Completed",         value: data.completed,      icon: CheckCircle2,  color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "In Progress",       value: data.inProgress,     icon: Clock,         color: "text-amber-600",   bg: "bg-amber-50" },
-    { label: "Completion Rate",   value: `${data.conversionRate}%`, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
+    { label: t("anComp.totalProjects"),    value: data.total,          icon: FolderOpen,    color: "text-blue-600",    bg: "bg-blue-50" },
+    { label: t("anComp.completed"),         value: data.completed,      icon: CheckCircle2,  color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: t("anComp.inProgress"),       value: data.inProgress,     icon: Clock,         color: "text-amber-600",   bg: "bg-amber-50" },
+    { label: t("anComp.completionRate"),   value: `${data.conversionRate}%`, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
   return (
@@ -44,7 +47,7 @@ export function ProjectsOverview({ data }: Props) {
       transition={{ delay: 0.1 }}
       className="glass-card p-6"
     >
-      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">Projects Overview</p>
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">{t("anComp.projectsOverview")}</p>
 
       <div className="flex items-center gap-6">
         <div className="shrink-0">

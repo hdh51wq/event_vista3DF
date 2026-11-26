@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import type { YearComparisonData } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface Props {
   data: YearComparisonData[];
@@ -31,6 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function RevenueChart({ data, total, comparison }: Props) {
+  const { t } = useLanguage();
   const isPositive = comparison.percentage >= 0;
 
   return (
@@ -41,21 +43,21 @@ export function RevenueChart({ data, total, comparison }: Props) {
     >
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Total Revenue</p>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">{t("anComp.totalRevenue")}</p>
           <p className="text-3xl font-bold text-zinc-900">${total.toLocaleString()}</p>
           <div className={`flex items-center gap-1 mt-1 text-sm font-medium ${isPositive ? "text-emerald-600" : "text-red-500"}`}>
             {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-            {isPositive ? "+" : ""}{comparison.percentage}% vs previous period
+            {isPositive ? "+" : ""}{comparison.percentage}% {t("anComp.vsPreviousPeriod")}
           </div>
         </div>
         <div className="flex items-center gap-4 text-xs font-medium">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-coral-400" />
-            <span className="text-zinc-500">This Year</span>
+            <span className="text-zinc-500">{t("anComp.thisYear")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-zinc-200" />
-            <span className="text-zinc-500">Last Year</span>
+            <span className="text-zinc-500">{t("anComp.lastYear")}</span>
           </div>
         </div>
       </div>
@@ -76,8 +78,8 @@ export function RevenueChart({ data, total, comparison }: Props) {
             tickFormatter={(v) => `$${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ fill: "#f4f4f5" }} />
-          <Bar dataKey="previous" name="Last Year" fill="#e4e4e7" radius={[4, 4, 0, 0]} />
-          <Bar dataKey="current" name="This Year" fill="#ff856a" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="previous" name={t("anComp.lastYear")} fill="#e4e4e7" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="current" name={t("anComp.thisYear")} fill="#ff856a" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </motion.div>

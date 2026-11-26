@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { ArrowUp, ArrowDown, Minus, ExternalLink } from "lucide-react";
 import type { TopClient } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type SortKey = keyof Pick<TopClient, "projects" | "revenue" | "averageProjectValue" | "lastProject">;
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function TopClients({ clients }: Props) {
+  const { t } = useLanguage();
   const [sortKey, setSortKey] = useState<SortKey>("revenue");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -48,7 +50,7 @@ export function TopClients({ clients }: Props) {
   if (!clients.length) {
     return (
       <div className="glass-card p-6 flex items-center justify-center min-h-[200px]">
-        <p className="text-zinc-400 text-sm">No client data available</p>
+        <p className="text-zinc-400 text-sm">{t("anComp.noClientData")}</p>
       </div>
     );
   }
@@ -61,18 +63,18 @@ export function TopClients({ clients }: Props) {
       className="glass-card overflow-hidden"
     >
       <div className="p-6 pb-0">
-        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Top Clients by Revenue</p>
+        <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("anComp.topClientsByRevenue")}</p>
       </div>
 
       <div className="overflow-x-auto mt-4">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-y border-zinc-100 bg-zinc-50/60">
-              <th className="px-4 py-3 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">Client</th>
-              <HeaderCell col="projects" label="Projects" />
-              <HeaderCell col="revenue" label="Revenue" />
-              <HeaderCell col="averageProjectValue" label="Avg Value" />
-              <HeaderCell col="lastProject" label="Last Project" />
+              <th className="px-4 py-3 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">{t("anComp.client")}</th>
+              <HeaderCell col="projects" label={t("anComp.projects")} />
+              <HeaderCell col="revenue" label={t("anComp.revenue")} />
+              <HeaderCell col="averageProjectValue" label={t("anComp.avgValue")} />
+              <HeaderCell col="lastProject" label={t("anComp.lastProject")} />
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-50">

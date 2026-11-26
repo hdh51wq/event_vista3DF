@@ -6,12 +6,14 @@ import {
   Clock, Target, DollarSign, BarChart3, Star, TrendingUp, TrendingDown,
 } from "lucide-react";
 import type { AnalyticsData } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface Props {
   data: AnalyticsData;
 }
 
 export function PerformanceMetrics({ data }: Props) {
+  const { t } = useLanguage();
   const avgDealSize = data.projects.total > 0
     ? Math.round(data.revenue.total / data.projects.total)
     : 0;
@@ -29,15 +31,15 @@ export function PerformanceMetrics({ data }: Props) {
 
   const metrics = [
     {
-      label: "Avg Project Duration",
-      value: `${data.projects.averageDuration} days`,
+      label: t("anComp.avgDuration"),
+      value: `${data.projects.averageDuration} ${t("anComp.days")}`,
       icon: Clock,
       color: "text-blue-600",
       bg: "bg-blue-50",
       trend: null,
     },
     {
-      label: "Win Rate",
+      label: t("anComp.winRate"),
       value: `${data.projects.conversionRate}%`,
       icon: Target,
       color: "text-emerald-600",
@@ -45,7 +47,7 @@ export function PerformanceMetrics({ data }: Props) {
       trend: data.projects.conversionRate >= 50 ? "up" : "down",
     },
     {
-      label: "Avg Deal Size",
+      label: t("anComp.avgDealSize"),
       value: `$${avgDealSize.toLocaleString()}`,
       icon: DollarSign,
       color: "text-purple-600",
@@ -53,7 +55,7 @@ export function PerformanceMetrics({ data }: Props) {
       trend: data.revenue.comparison.percentage >= 0 ? "up" : "down",
     },
     {
-      label: "Projects / Month",
+      label: t("anComp.projectsPerMonth"),
       value: projectsPerMonth,
       icon: BarChart3,
       color: "text-amber-600",
@@ -61,7 +63,7 @@ export function PerformanceMetrics({ data }: Props) {
       trend: null,
     },
     {
-      label: "YoY Growth",
+      label: t("anComp.yoyGrowth"),
       value: `${data.trends.growthRate >= 0 ? "+" : ""}${data.trends.growthRate}%`,
       icon: data.trends.growthRate >= 0 ? TrendingUp : TrendingDown,
       color: data.trends.growthRate >= 0 ? "text-emerald-600" : "text-red-500",
@@ -69,7 +71,7 @@ export function PerformanceMetrics({ data }: Props) {
       trend: data.trends.growthRate >= 0 ? "up" : "down",
     },
     {
-      label: "Active Clients",
+      label: t("anComp.activeClients"),
       value: data.clients.total,
       icon: Star,
       color: "text-coral-500",
@@ -85,7 +87,7 @@ export function PerformanceMetrics({ data }: Props) {
       transition={{ delay: 0.3 }}
       className="glass-card p-6"
     >
-      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">Performance Metrics</p>
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">{t("anComp.performanceMetrics")}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {metrics.map((m, idx) => (
@@ -106,7 +108,7 @@ export function PerformanceMetrics({ data }: Props) {
                 {m.trend === "up"
                   ? <TrendingUp className="w-3 h-3" />
                   : <TrendingDown className="w-3 h-3" />}
-                <span>{m.trend === "up" ? "Trending up" : "Trending down"}</span>
+                <span>{m.trend === "up" ? t("anComp.trendingUp") : t("anComp.trendingDown")}</span>
               </div>
             )}
           </motion.div>

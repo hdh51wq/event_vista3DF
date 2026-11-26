@@ -5,6 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import type { MonthlySeasonalData } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface Props {
   data: MonthlySeasonalData[];
@@ -30,6 +31,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function ProjectsTrend({ data, peakMonth, lowMonth, growthRate }: Props) {
+  const { t } = useLanguage();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -39,20 +41,20 @@ export function ProjectsTrend({ data, peakMonth, lowMonth, growthRate }: Props) 
     >
       <div className="flex items-start justify-between mb-5">
         <div>
-          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Projects Trend</p>
-          <p className="text-sm text-zinc-500">Monthly project & revenue activity</p>
+          <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">{t("anComp.projectsTrend")}</p>
+          <p className="text-sm text-zinc-500">{t("anComp.monthlyActivity")}</p>
         </div>
         <div className="flex gap-4 text-xs">
           <div className="text-center">
-            <p className="text-zinc-400 font-medium">Peak</p>
+            <p className="text-zinc-400 font-medium">{t("anComp.peak")}</p>
             <p className="font-bold text-emerald-600">{peakMonth}</p>
           </div>
           <div className="text-center">
-            <p className="text-zinc-400 font-medium">Low</p>
+            <p className="text-zinc-400 font-medium">{t("anComp.low")}</p>
             <p className="font-bold text-amber-500">{lowMonth}</p>
           </div>
           <div className="text-center">
-            <p className="text-zinc-400 font-medium">YoY Growth</p>
+            <p className="text-zinc-400 font-medium">{t("anComp.yoyGrowth")}</p>
             <p className={`font-bold ${growthRate >= 0 ? "text-emerald-600" : "text-red-500"}`}>
               {growthRate >= 0 ? "+" : ""}{growthRate}%
             </p>
@@ -92,7 +94,7 @@ export function ProjectsTrend({ data, peakMonth, lowMonth, growthRate }: Props) 
             yAxisId="projects"
             type="monotone"
             dataKey="projects"
-            name="Projects"
+            name={t("anComp.projectsLabel")}
             stroke="#ff856a"
             strokeWidth={2}
             dot={{ r: 3, fill: "#ff856a" }}
@@ -102,7 +104,7 @@ export function ProjectsTrend({ data, peakMonth, lowMonth, growthRate }: Props) 
             yAxisId="revenue"
             type="monotone"
             dataKey="revenue"
-            name="Revenue ($)"
+            name={t("anComp.revenueDollars")}
             stroke="#8B5CF6"
             strokeWidth={2}
             strokeDasharray="5 5"

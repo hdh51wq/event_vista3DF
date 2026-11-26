@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Sun, Moon, TrendingUp, Lightbulb } from "lucide-react";
 import type { MonthlySeasonalData } from "@/types/analytics";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 interface Props {
   data: MonthlySeasonalData[];
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props) {
+  const { t } = useLanguage();
   const maxProjects = Math.max(...data.map(d => d.projects), 1);
   const maxRevenue = Math.max(...data.map(d => d.revenue), 1);
 
@@ -27,16 +29,16 @@ export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props)
 
   const insights = [
     peakMonth
-      ? `${peakMonth} is your peak month — plan capacity accordingly`
+      ? `${peakMonth} ${t("anComp.peakMonthInsight")}`
       : null,
     lowMonth
-      ? `${lowMonth} is historically slow — consider promotions or off-season packages`
+      ? `${lowMonth} ${t("anComp.lowMonthInsight")}`
       : null,
     growthRate > 0
-      ? `Year-over-year revenue grew by ${growthRate}% — strong positive trend`
+      ? `${t("anComp.yoyGrewPrefix")} ${growthRate}% ${t("anComp.yoyGrewSuffix")}`
       : growthRate < 0
-      ? `Revenue declined ${Math.abs(growthRate)}% vs last year — review pricing strategy`
-      : "Revenue is stable year over year",
+      ? `${t("anComp.revenueDeclinedPrefix")} ${Math.abs(growthRate)}% ${t("anComp.revenueDeclinedSuffix")}`
+      : t("anComp.revenueStable"),
   ].filter(Boolean);
 
   return (
@@ -46,14 +48,14 @@ export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props)
       transition={{ delay: 0.35 }}
       className="glass-card p-6"
     >
-      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">Seasonal Activity Heatmap</p>
+      <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-5">{t("anComp.seasonalHeatmap")}</p>
 
       {/* Heatmap */}
       <div className="grid grid-cols-6 sm:grid-cols-12 gap-2 mb-6">
         {data.map((d) => (
           <div key={d.month} className="flex flex-col items-center gap-1">
             <div
-              title={`${d.month}: ${d.projects} projects, $${d.revenue.toLocaleString()}`}
+              title={`${d.month}: ${d.projects} ${t("anComp.projects")}, $${d.revenue.toLocaleString()}`}
               className={cn(
                 "w-full aspect-square rounded-lg flex items-center justify-center text-[10px] font-bold cursor-default transition-all hover:scale-110",
                 getIntensityColor(d.projects, maxProjects)
@@ -68,13 +70,13 @@ export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props)
 
       {/* Legend */}
       <div className="flex items-center gap-2 mb-6 text-xs text-zinc-400">
-        <span>Low</span>
+        <span>{t("anComp.low")}</span>
         <div className="flex gap-1">
           {["bg-zinc-100","bg-coral-100","bg-coral-200","bg-coral-300","bg-coral-400"].map((c, i) => (
             <span key={i} className={`w-5 h-3 rounded ${c}`} />
           ))}
         </div>
-        <span>High</span>
+        <span>{t("anComp.high")}</span>
       </div>
 
       {/* Peak / Low indicators */}
@@ -82,14 +84,14 @@ export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props)
         <div className="p-3 bg-emerald-50 rounded-xl flex items-center gap-3">
           <Sun className="w-5 h-5 text-emerald-600 shrink-0" />
           <div>
-            <p className="text-xs text-zinc-400 font-medium">Peak Season</p>
+            <p className="text-xs text-zinc-400 font-medium">{t("anComp.peakSeason")}</p>
             <p className="font-bold text-emerald-700">{peakMonth || "—"}</p>
           </div>
         </div>
         <div className="p-3 bg-blue-50 rounded-xl flex items-center gap-3">
           <Moon className="w-5 h-5 text-blue-500 shrink-0" />
           <div>
-            <p className="text-xs text-zinc-400 font-medium">Low Season</p>
+            <p className="text-xs text-zinc-400 font-medium">{t("anComp.lowSeason")}</p>
             <p className="font-bold text-blue-600">{lowMonth || "—"}</p>
           </div>
         </div>
@@ -98,7 +100,7 @@ export function SeasonalTrends({ data, peakMonth, lowMonth, growthRate }: Props)
       {/* Insights */}
       <div className="space-y-2">
         <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Lightbulb className="w-3.5 h-3.5" /> Insights
+          <Lightbulb className="w-3.5 h-3.5" /> {t("anComp.insights")}
         </p>
         {insights.map((insight, i) => (
           <div key={i} className="flex items-start gap-2 text-sm text-zinc-600">
